@@ -1,5 +1,5 @@
 // Bumped when the stored LinkState changes shape; every plugin's atom carries it.
-export const LINK_SHAPE = 'link-1'
+export const LINK_SHAPE = 'link-2'
 
 export type Pause = null | 'done'
 export type LinkState = { pause: Pause; bonusSeq: number }

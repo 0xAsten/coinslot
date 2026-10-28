@@ -1,5 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
+import { LINK_SHAPE } from './shared/link'
+
 const PANE = {
   plugin: 'reef-net',
   component: 'Pane',
@@ -20,7 +22,7 @@ type Store = Record<string, { value: unknown; version: number }>
 function wire(on: (event: any, fn: (...a: any[]) => any) => void, link?: { pause: null | 'done'; bonusSeq: number }) {
   // a fixed sim seed: the run is reproducible
   const store: Store = { seed: { value: { shape: 'seed-1', value: 7 }, version: 1 } }
-  if (link) store.link = { value: { shape: 'link-1', value: link }, version: 1 }
+  if (link) store.link = { value: { shape: LINK_SHAPE, value: link }, version: 1 }
   on('state.get', (_: unknown, e: { key: string }) => ({ value: store[e.key] ?? { value: undefined, version: 0 } }))
   on('state.set', (_: unknown, e: { key: string; value: unknown }) => {
     const version = (store[e.key]?.version ?? 0) + 1
@@ -49,7 +51,7 @@ test('a pause stops the tick and playing resumes it', async ($, on) => {
   await ui.advance(1000)
   expect(await game(ui)).toBe(a)
 
-  h.store.link = { value: { shape: 'link-1', value: idle }, version: 2 }
+  h.store.link = { value: { shape: LINK_SHAPE, value: idle }, version: 2 }
   await ui.redraw()
   await ui.advance(1000)
   expect(await game(ui)).not.toBe(a)
@@ -81,7 +83,7 @@ test('bonusSeq +2 spawns two golden fish', async ($, on) => {
   const before = JSON.stringify(await ui.drawn({ in: 'reef' }))
   expect(before).not.toContain('"golden"')
 
-  h.store.link = { value: { shape: 'link-1', value: { pause: null, bonusSeq: 2 } }, version: 2 }
+  h.store.link = { value: { shape: LINK_SHAPE, value: { pause: null, bonusSeq: 2 } }, version: 2 }
   await ui.redraw()
   await ui.advance(1500)
   expect(await ui.find({ type: 'Text', text: /✦ BONUS/, in: 'reef' })).toBeDefined()
