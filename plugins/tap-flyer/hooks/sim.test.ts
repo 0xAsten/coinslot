@@ -82,19 +82,31 @@ test('passing a gap scores once', () => {
 })
 
 test('obstacle and floor contact end the run', () => {
-  // the top wall of the next pillar
+  // the top wall of the next pillar: dead within 15 ticks, long before the floor
   let g = empty()
   g.obstacles = [{ x: g.fx + 6, gapY: 30, gapH: 6, scored: false }]
   g.y = 10
-  g = run(g, 200, {})
+  g = run(g, 15, {})
   expect(g.over).toBe(true)
+  expect(g.y + FLY_H).toBeLessThan(floorY(g.h))
 
-  // the bottom wall
+  // the bottom wall, same
   g = empty()
   g.obstacles = [{ x: g.fx + 6, gapY: 4, gapH: 6, scored: false }]
   g.y = 28
-  g = run(g, 200, {})
+  g = run(g, 15, {})
   expect(g.over).toBe(true)
+  expect(g.y + FLY_H).toBeLessThan(floorY(g.h))
+
+  // the same pillars with the flyer inside the gap: alive through the crossing
+  g = empty()
+  g.obstacles = [{ x: g.fx + 6, gapY: 12, gapH: 20, scored: false }]
+  for (let i = 0; i < 15; i += 1) {
+    g = step(g, DT, {})
+    g.y = 20
+    g.vy = 0
+  }
+  expect(g.over).toBe(false)
 
   // the floor
   g = empty()
@@ -102,6 +114,35 @@ test('obstacle and floor contact end the run', () => {
   expect(g.over).toBe(true)
   expect(g.y + FLY_H).toBeGreaterThanOrEqual(floorY(g.h) - 1e-6)
   expect(g.score).toBe(0)
+})
+
+test('touching the edge of the gap is not a hit', () => {
+  // flyer overlapping the pillar's columns, exactly on the gap's top / bottom edge
+  let g = empty()
+  g.obstacles = [{ x: g.fx, gapY: 20, gapH: 10, scored: false }]
+  g.y = 20
+  g.vy = 0.001
+  g = step(g, 1e-6, {})
+  expect(g.over).toBe(false)
+
+  g = empty()
+  g.obstacles = [{ x: g.fx, gapY: 20, gapH: 10, scored: false }]
+  g.y = 30 - FLY_H
+  g.vy = -0.001
+  g = step(g, 1e-6, {})
+  expect(g.over).toBe(false)
+
+  // one pixel past either edge is a hit
+  g = empty()
+  g.obstacles = [{ x: g.fx, gapY: 20, gapH: 10, scored: false }]
+  g.y = 19
+  g = step(g, 1e-6, {})
+  expect(g.over).toBe(true)
+  g = empty()
+  g.obstacles = [{ x: g.fx, gapY: 20, gapH: 10, scored: false }]
+  g.y = 29 - FLY_H + 1.5
+  g = step(g, 1e-6, {})
+  expect(g.over).toBe(true)
 })
 
 test('the ceiling holds the flyer in without ending the run', () => {

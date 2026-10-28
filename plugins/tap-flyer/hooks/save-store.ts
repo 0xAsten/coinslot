@@ -37,7 +37,15 @@ export function parseSave(v: unknown): JsonValue | null {
   if (!isEnvelope(v) || v.g === null || typeof v.g !== 'object') return null
   const g = v.g as Record<string, unknown>
   if (!finite(g.score) || !finite(g.seed) || !finite(g.w) || !finite(g.h) || !finite(g.y) || !finite(g.vy)) return null
+  if (!finite(g.fx) || !finite(g.overT) || !finite(g.t) || !finite(g.pulse) || typeof g.over !== 'boolean') return null
   if (!Array.isArray(g.obstacles) || !Array.isArray(g.bonuses)) return null
+  // a bad entry would throw inside step on the next frame, so every one is checked here
+  const rec = (e: unknown): e is Record<string, unknown> => e !== null && typeof e === 'object' && !Array.isArray(e)
+  const pillars = g.obstacles.every(
+    e => rec(e) && finite(e.x) && finite(e.gapY) && finite(e.gapH) && typeof e.scored === 'boolean',
+  )
+  const coins = g.bonuses.every(e => rec(e) && finite(e.x) && finite(e.y))
+  if (!pillars || !coins) return null
 
   return { v: v.v, g: v.g as JsonValue }
 }
