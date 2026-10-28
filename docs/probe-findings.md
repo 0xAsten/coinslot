@@ -58,3 +58,15 @@ The Bash call in scenario (b) ran without a prompt because the session was in au
 Passed on c46fd20: bonus fish recognisable, done overlay at turn end, click/key resumes, coins survive the dialog.
 
 Renamed 2026-10-28: reef-net is now fish-shooter (command `/fish-shooter`); entries above keep the old name as measured.
+
+## Esc and pointer move, live
+
+Measured 2026-10-28 in the author's terminal, inline layout, brick-breaker on the shell.
+
+- Esc never reaches the Client: pressing it mid-run does not pause (the engine takes it to return focus to the chat).
+- Pointer move without a click does reach the Client: the paddle follows the mouse.
+- A dialog remount comes back `PAUSED · PRESS ANY KEY` with the score kept.
+- The `CLAUDE IS DONE` banner shows at a main turn end.
+- Two presses (start, then launch) felt fine.
+
+Consequence: Esc pause is inert; idle pause is the only away-pause (snake 6000 ms; space-shooter, tap-flyer, jump-runner 3000 ms).
