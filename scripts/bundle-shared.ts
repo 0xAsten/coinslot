@@ -10,7 +10,7 @@ const shared = existsSync(sharedDir) ? readdirSync(sharedDir).filter(f => f.ends
 const pluginsDir = join(root, 'plugins')
 const plugins = existsSync(pluginsDir)
   ? readdirSync(pluginsDir, { withFileTypes: true })
-      .filter(d => d.isDirectory() && !d.name.startsWith('_'))
+      .filter(d => d.isDirectory() && d.name !== '_probe')
       .map(d => d.name)
       .filter(n => !only || n === only)
   : []

@@ -32,7 +32,9 @@ for (const name of names) {
   const dir = join(pluginsDir, name)
   console.log(name)
 
-  if (!name.startsWith('_')) {
+  // _probe is a throwaway and never carries shared/; every other plugin, including
+  // the _shared-tests host, must be in sync.
+  if (name !== '_probe') {
     run(name, 'bundle --check', ['bun', 'scripts/bundle-shared.ts', '--check', `--plugin=${name}`])
   }
   run(name, 'validate', ['claude', 'plugin', 'validate', dir])
@@ -60,6 +62,9 @@ for (const name of names) {
     }
   }
 
+  // shared/ is not a plugin, so `claude plugin test` cannot reach its tests. The
+  // _shared-tests plugin carries the bundled copy (shared/*.test.ts included) and
+  // runs them where claude-code/testing resolves; it ships in no marketplace entry.
   run(name, 'test', ['claude', 'plugin', 'test', dir], true)
 }
 console.log('check: all ok')
