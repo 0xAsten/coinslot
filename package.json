@@ -1,0 +1,11 @@
+{
+  "name": "coinslot",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Original terminal mini-games, each a Claude Code mod.",
+  "scripts": {
+    "bundle": "bun scripts/bundle-shared.ts",
+    "check": "bun scripts/check.ts"
+  }
+}

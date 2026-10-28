@@ -16,9 +16,9 @@
 
 - Terminal surface only; on any other `e.surface` the Pane renders one `Text`: `Coin Slot runs in the terminal.`
 - Inline pane: never `height="100%"`; Client gets `width = max(20, e.props.bodyColumns)`, `height = clamp(e.props.scroll.bodyRows, 8, 26)`; `$.ui.open` passes `rows: 28`.
-- Minimum play area 60 cols × 16 rows; below it the Client draws `Make the terminal wider or taller (60×16).`
+- Minimum play area 40 cols × 10 rows; below it the Client draws `Make the terminal wider or taller (40×10) · now <cols>×<rows>`
 - Target 30 fps: Client tick 33 ms.
-- Pause when the pane is unfocused; resume when focus returns. Esc always returns focus to the chat.
+- Claude Code gives no reliable focus signal in the inline layout (`isFocused` measured always false). Games do not pause on unfocus. Each game decides in Plan 2 whether it needs an idle auto-pause (for example, no key for N seconds shows PAUSED · PRESS ANY KEY). Esc always returns focus to the chat.
 - TypeScript ≥5.9 (`typescript@5.9.3`); engine tsconfig targets es2023.
 - No "Claude" in any plugin name or command; descriptions say "for Claude Code". License MIT.
 - Install line format, verbatim: `/plugin install <game> --marketplace beasaltfish/coinslot`.
@@ -31,7 +31,7 @@
 
 - A background subagent finishing while you play → must not pause (test in Task 3).
 - Claude finishes twice before you look → one overlay, not stacked; reason `needs-you` outranks `done` (test in Task 3).
-- Terminal resized below 60×16 mid-game → game pauses with the size message, resumes without losing score (test in Task 4).
+- Terminal resized below 40×10 mid-game → game pauses with the size message, resumes without losing score (test in Task 4).
 - Hot reload with an old `$.state` value from a previous shape → atom `shape: 'link-1'` falls back to initial, no crash (test in Task 3).
 - Many tool calls in one frame (a burst of 30) → bonuses capped at 3 on screen, no frame stall (test in Task 4).
 

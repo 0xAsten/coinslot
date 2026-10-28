@@ -1,0 +1,14 @@
+{
+  "name": "coinslot",
+  "description": "Original terminal mini-games, each a Claude Code mod that runs in a pane beside the chat.",
+  "owner": {
+    "name": "beasaltfish"
+  },
+  "plugins": [
+    {
+      "name": "reef-net",
+      "source": "./plugins/reef-net",
+      "description": "An original arcade reef-fishing game for Claude Code. Pauses when Claude finishes and drops golden fish while Claude works."
+    }
+  ]
+}
