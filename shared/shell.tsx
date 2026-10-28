@@ -175,6 +175,8 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
       if (cols <= 0 || rows <= 0) return
       // a fixed step keeps the sim reproducible; a slow tick just plays slower
       const dt = TICK_MS / 1000
+      // no step this tick unless one runs below
+      mine.stepMs = 0
 
       const held = p.pause !== null || mine.hold !== null
       if (held && !mine.wasHeld) sendSave()
@@ -260,10 +262,12 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
   const rows = surface.rows
   let cells: Cells | undefined
   let renderStart = 0
+  let rendered = false
   if (cols > 0 && rows > 0 && (cols < MIN_COLS || rows < MIN_ROWS)) {
     cells = drawSizeNotice(cols, rows)
   } else if (ctl.game !== undefined) {
     renderStart = props.debug ? now() : 0
+    rendered = true
     cells = spec.render(ctl.game)
     // a finished turn outranks the local hold
     const banner: Banner | null = props.pause !== null ? props.pause : ctl.hold
@@ -272,7 +276,7 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
   if (!cells) return <Text dimColor>{spec.hint ?? `${spec.title}: click here to focus.`}</Text>
 
   let runs: ReturnType<typeof toRuns>
-  if (props.debug) {
+  if (props.debug && rendered) {
     const at = now()
     ctl.frames = ctl.frames.filter(f => at - f.at < READOUT_WINDOW_MS)
     const max = ctl.frames.reduce((m, f) => Math.max(m, f.ms), 0)
