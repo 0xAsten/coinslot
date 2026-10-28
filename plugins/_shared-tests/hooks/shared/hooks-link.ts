@@ -5,7 +5,7 @@ import type { On } from 'claude-code'
 // engine's scan refuses $ passed on through a parameter. An import is allowed.
 import { applyLink } from '../link-apply'
 
-import { onAsk, onResume, onToolCall, onTurnComplete, onTurnStart } from './link'
+import { onResume, onToolCall, onTurnComplete, onTurnStart } from './link'
 import type { LinkState } from './link'
 
 // Observe only: every hook returns next(e) untouched, and `.catch` hands a
@@ -38,8 +38,9 @@ export function registerClaudeLink(on: On, opts: { title: string }): void {
   }).catch(($, e, next) => next(e))
 
   on('tool.call', async ($, e, next) => {
-    const isMainAsk = e.tool === 'AskUserQuestion' && e.agentId === undefined
-    await applyLink($, s => onToolCall(isMainAsk ? onAsk(s) : s))
+    // AskUserQuestion no longer pauses: the engine hides the pane while the dialog is
+    // up, so a needs-you overlay would only greet the person after they answered.
+    await applyLink($, onToolCall)
 
     return next(e)
   }).catch(($, e, next) => next(e))

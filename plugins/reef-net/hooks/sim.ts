@@ -52,6 +52,8 @@ export type Game = {
   spawning: boolean
   timers: Record<Kind, number>
   caughtCount: number
+  // seconds left of the HUD's BONUS flash after a golden fish arrives
+  bonusFlash: number
 }
 
 export type Input = {
@@ -118,6 +120,7 @@ export function newGame(w: number, h: number, seed = 1): Game {
     spawning: true,
     timers: { fish: 0.2, turtle: 1.5, manta: 4, whale: 40 },
     caughtCount: 0,
+    bonusFlash: 0,
   }
   // Seed the lagoon so it is not empty on the first frame.
   for (let i = 0; i < 2; i += 1) spawnGroup(g, 'fish', true)
@@ -310,6 +313,7 @@ function updateEffects(g: Game, dt: number): void {
     p.y -= 6 * dt
   }
   g.pops = g.pops.filter(p => p.age < 1.2)
+  g.bonusFlash = Math.max(0, g.bonusFlash - dt)
 }
 
 export function step(state: Game, dt: number, input: Input = {}): Game {
@@ -347,6 +351,8 @@ export function step(state: Game, dt: number, input: Input = {}): Game {
 
 export const BONUS_VALUE = 15
 export const BONUS_MAX = 3
+export const BONUS_SCALE = 1.6
+export const BONUS_FLASH_S = 1.5
 
 // One golden fish crossing the lagoon left to right or right to left. A reward
 // only: it is caught half the time, pays 15 x bet and never changes the rest.
@@ -368,6 +374,8 @@ export function spawnBonus(state: Game): Game {
   c.hp = 2
   c.turn = 0
   c.speed = range(g, 14, 20)
+  c.r = SPECS.fish.r * BONUS_SCALE
+  g.bonusFlash = BONUS_FLASH_S
   g.creatures.push(c)
 
   return g

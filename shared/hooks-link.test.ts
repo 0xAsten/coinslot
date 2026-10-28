@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import { registerClaudeLink } from './hooks-link'
 import type { LinkState } from './link'
 
-test('main AskUserQuestion pauses needs-you, subagent one does not, every call counts', async ($, on) => {
+test('AskUserQuestion counts as a tool call and pauses nothing', async ($, on) => {
   let stored: { value: unknown; version: number } = { value: undefined, version: 0 }
   // writes arrive tagged `{ shape, value }`
   const held = () => (stored.value as { value: LinkState }).value
@@ -23,6 +23,6 @@ test('main AskUserQuestion pauses needs-you, subagent one does not, every call c
 
   await $.tool.call({ tool: 'AskUserQuestion', questions: [] })
   const main = held()
-  expect(main.pause).toBe('needs-you')
+  expect(main.pause).toBe(null)
   expect(main.bonusSeq).toBe(3)
 })

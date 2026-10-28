@@ -1,6 +1,6 @@
 // Pure renderer: Game -> cells. Pixels are half-block halves (2 per cell
 // vertically); text overlays (net rings, "+N", HUD) are drawn on the cells.
-import { cannonPos } from './sim'
+import { BONUS_SCALE, cannonPos } from './sim'
 import type { Creature, Game } from './sim'
 
 import type { Cells } from './shared/cells'
@@ -126,18 +126,19 @@ function hibiscus(p: Px, t: number) {
 }
 
 const WHITE = 0xffffff
-const GOLD_LIGHT = 0xfff6b0
+const GOLD = 0xffd61f
 
-function shape(c: Creature, u: number, v: number): number {
+function shape(c: Creature, u: number, v: number, t: number): number {
   switch (c.kind) {
     case 'fish': {
       if ((u / 3) ** 2 + (v / 1.6) ** 2 < 1) {
         if (u > 1.2 && u < 2.2 && v > -1 && v < 0) return 0x15324a
-        if (c.golden) return v < -0.6 ? GOLD_LIGHT : 0xffb300
+        // gold and white swap every quarter second so it cannot pass for a small fish
+        if (c.golden) return Math.floor(t / 0.25) % 2 === 0 ? GOLD : WHITE
 
         return v < -0.6 ? 0xffe866 : 0xffd61f
       }
-      if (u < -2.2 && u > -5 && Math.abs(v) < (-u - 2.2) * 0.75 + 0.3) return c.golden ? 0xff8a00 : 0xf0b400
+      if (u < -2.2 && u > -5 && Math.abs(v) < (-u - 2.2) * 0.75 + 0.3) return c.golden ? GOLD : 0xf0b400
 
       return -1
     }
@@ -181,20 +182,35 @@ function shape(c: Creature, u: number, v: number): number {
 function drawCreature(p: Px, c: Creature, t: number) {
   const cos = Math.cos(c.ang)
   const sin = Math.sin(c.ang)
-  const R = Math.ceil(c.r + 7)
+  const k = c.golden ? BONUS_SCALE : 1
+  const R = Math.ceil((c.r + 7) * k)
   const blink = c.caught && Math.floor(c.flash * 14) % 2 === 0
   for (let dy = -R; dy <= R; dy += 1) {
     for (let dx = -R; dx <= R; dx += 1) {
-      const u = dx * cos + dy * sin
-      let v = -dx * sin + dy * cos
+      const u = (dx * cos + dy * sin) / k
+      let v = (-dx * sin + dy * cos) / k
       if (cos < 0) v = -v
-      const col = shape(c, u, v)
+      const col = shape(c, u, v, t)
       if (col < 0) continue
       let out = col
       if (blink) out = WHITE
       else if (c.flash > 0) out = mix(col, WHITE, 0.55)
       put(p, c.x + dx, c.y + dy + Math.sin(t * 6 + c.id) * 0.3, out)
     }
+  }
+}
+
+// Three or four bright specks behind a golden fish, fading with distance.
+function sparkles(p: Px, c: Creature, t: number) {
+  const back = Math.PI + c.ang
+  for (let i = 1; i <= 4; i += 1) {
+    const d = c.r + i * 2.2
+    const tw = 0.5 + 0.5 * Math.sin(t * 14 + i * 1.7 + c.id)
+    const x = Math.floor(c.x + Math.cos(back) * d)
+    const y = Math.floor(c.y + Math.sin(back) * d + (i % 2 ? -1 : 1))
+    if (x < 0 || y < 0 || x >= p.w || y >= p.h) continue
+    const idx = y * p.w + x
+    p.buf[idx] = mix(p.buf[idx]!, WHITE, Math.min(1, (1 - (i - 1) * 0.22) * (0.55 + 0.45 * tw)))
   }
 }
 
@@ -233,7 +249,10 @@ export function renderCells(g: Game, hintOn = true, debug = ''): Cells {
   }
 
   const order = [...g.creatures].sort((a, b) => b.r - a.r)
-  for (const c of order) drawCreature(px, c, g.t)
+  for (const c of order) {
+    drawCreature(px, c, g.t)
+    if (c.golden && !c.caught) sparkles(px, c, g.t)
+  }
   drawCannon(px, g)
   for (const s of g.shots) disc(px, s.x, s.y, 1.3, WHITE)
 
@@ -293,6 +312,15 @@ export function renderCells(g: Game, hintOn = true, debug = ''): Cells {
     for (let k = 0; k < debug.length && start + k < cols; k += 1) {
       ch[start + k] = debug[k]!
       fg[start + k] = 0xff9ad0
+    }
+  }
+  if (g.bonusFlash > 0) {
+    const tag = ' ✦ BONUS '
+    const at = Math.floor((cols - tag.length) / 2)
+    for (let k = 0; k < tag.length && at + k < cols; k += 1) {
+      ch[at + k] = tag[k]!
+      fg[at + k] = 0xffd61f
+      bg[at + k] = 0x6b3a00
     }
   }
   if (g.coins < g.bet) {

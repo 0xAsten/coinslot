@@ -91,8 +91,7 @@ test('bonusSeq +2 spawns two golden fish', async ($, on) => {
   h.store.link = { value: { shape: 'link-1', value: { pause: null, bonusSeq: 2 } }, version: 2 }
   await ui.redraw()
   await ui.advance(1500)
-  // the golden fish body colour (quantized) only appears with a golden fish on screen
-  expect(JSON.stringify(await ui.drawn({ in: 'reef' }))).toContain('#e0e0a0')
+  expect(await ui.find({ type: 'Text', text: /✦ BONUS/, in: 'reef' })).toBeDefined()
   await ui.unmount()
 })
 
