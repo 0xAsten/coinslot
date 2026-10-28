@@ -2,5 +2,8 @@
   "name": "_shared-tests",
   "version": "0.0.1",
   "description": "Test host for shared/ code: carries the bundled copy so the shared tests run under claude plugin test. Not published.",
+  "author": {
+    "name": "beasaltfish"
+  },
   "license": "MIT"
 }

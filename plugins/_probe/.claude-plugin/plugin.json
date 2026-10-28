@@ -2,5 +2,8 @@
   "name": "_probe",
   "version": "0.0.1",
   "description": "Throwaway linkage probe: shows in a pane what events reach a plugin. Open it with /probe.",
+  "author": {
+    "name": "beasaltfish"
+  },
   "license": "MIT"
 }

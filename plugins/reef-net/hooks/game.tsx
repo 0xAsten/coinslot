@@ -9,12 +9,14 @@ import type { Pause } from './shared/link'
 import { drawOverlay, drawSizeNotice } from './shared/overlay'
 
 export type Snapshot = { coins: number; bet: number; caughtCount: number }
-type Props = { pause: Pause; bonusSeq: number; save?: Snapshot }
+// `seed` is optional: absent, the sim seeds itself once from the clock; tests and the
+// showcase recorder pass one so the run is reproducible.
+type Props = { pause: Pause; bonusSeq: number; save?: Snapshot; seed?: number }
 
 type Ctl = {
   game?: Game
   pending: Input
-  last: number
+  seed: number
   props: Props
   seenBonus: number
   restore?: Snapshot
@@ -48,7 +50,7 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
   if (surface.state === undefined) {
     ctl = {
       pending: {},
-      last: Date.now(),
+      seed: props.seed ?? Date.now() & 0xffff,
       props,
       seenBonus: props.bonusSeq,
       ticksSinceSave: 0,
@@ -72,9 +74,8 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
       const cols = surface.columns
       const rows = surface.rows
       if (cols <= 0 || rows <= 0) return
-      const now = Date.now()
-      const dt = Math.min(0.1, Math.max(0.001, (now - mine.last) / 1000))
-      mine.last = now
+      // a fixed step keeps the sim reproducible; a slow tick just plays slower
+      const dt = TICK_MS / 1000
 
       if (p.pause !== null && !mine.wasPaused) sendSave()
       mine.wasPaused = p.pause !== null
@@ -85,7 +86,7 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
       let changed = false
       if (!mine.game) {
         changed = true
-        mine.game = newGame(cols, rows * 2, now & 0xffff)
+        mine.game = newGame(cols, rows * 2, mine.seed)
         if (mine.restore) {
           mine.game.coins = mine.restore.coins
           mine.game.bet = Math.max(1, Math.min(5, Math.round(mine.restore.bet)))
@@ -108,6 +109,8 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
       mine.game = step(g, dt, mine.pending)
       mine.pending = {}
 
+      // A remount (dialog open/close) loses at most ~1 s of progress, by design:
+      // saving every tick would post at 30 Hz for no visible gain.
       mine.ticksSinceSave += 1
       if (mine.ticksSinceSave >= SAVE_EVERY_TICKS) {
         mine.ticksSinceSave = 0

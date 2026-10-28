@@ -1,4 +1,7 @@
-export type Pause = null | 'done' | 'needs-you'
+// Bumped when the stored LinkState changes shape; every plugin's atom carries it.
+export const LINK_SHAPE = 'link-1'
+
+export type Pause = null | 'done'
 export type LinkState = { pause: Pause; bonusSeq: number }
 
 export const LINK_INITIAL: LinkState = { pause: null, bonusSeq: 0 }
@@ -6,11 +9,7 @@ export const LINK_INITIAL: LinkState = { pause: null, bonusSeq: 0 }
 // Only main turns (no agentId) pause; a subagent finishing never does.
 export function onTurnComplete(s: LinkState, agentId?: string): LinkState {
   if (agentId !== undefined) return s
-  return s.pause === 'needs-you' ? s : { ...s, pause: 'done' }
-}
-
-export function onAsk(s: LinkState): LinkState {
-  return s.pause === 'needs-you' ? s : { ...s, pause: 'needs-you' }
+  return s.pause === 'done' ? s : { ...s, pause: 'done' }
 }
 
 export function onToolCall(s: LinkState): LinkState {

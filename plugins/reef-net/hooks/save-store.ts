@@ -13,3 +13,10 @@ export function readSave($: Parameters<typeof read>[0]): Promise<Snap | null> {
 export function writeSave($: Parameters<typeof update>[0], snap: Snap): Promise<Snap | null> {
   return update($, save, () => snap)
 }
+
+// Optional fixed RNG seed for tests and the showcase recorder; unset in play.
+const seed = atom({ plugin: 'reef-net', key: 'seed' } as const, null as number | null, { shape: 'seed-1' })
+
+export function readSeed($: Parameters<typeof read>[0]): Promise<number | null> {
+  return read($, seed)
+}

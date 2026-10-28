@@ -29,9 +29,12 @@ test('drawOverlay centers the done copy', () => {
   expect(rowText(c, 5).trim()).toBe('')
 })
 
-test('drawOverlay shows the needs-you copy', () => {
-  const out = drawOverlay(blank(60, 11), 'needs-you')
-  expect(rowText(out, 5)).toContain('CLAUDE NEEDS YOU · ESC TO RETURN')
+test('toRuns splits on a different bg even when fg is equal', () => {
+  const c = blank(2, 1)
+  c.ch = ['x', 'x']
+  c.fg = [0xff0000, 0xff0000]
+  c.bg = [0x000000, 0x0000ff]
+  expect(toRuns(c)[0]!.length).toBe(2)
 })
 
 test('overlay on a 20-col grid truncates without throwing', () => {

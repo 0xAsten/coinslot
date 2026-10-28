@@ -6,7 +6,6 @@ const BANNER_FG = 0xffd61f
 
 const COPY: Record<Exclude<Pause, null>, string> = {
   done: 'CLAUDE IS DONE · ESC TO RETURN',
-  'needs-you': 'CLAUDE NEEDS YOU · ESC TO RETURN',
 }
 
 function clone(c: Cells): Cells {

@@ -1,6 +1,6 @@
 import { expect, test } from 'claude-code/testing'
 
-import { LINK_INITIAL, onAsk, onResume, onToolCall, onTurnComplete, onTurnStart } from './link'
+import { LINK_INITIAL, onResume, onToolCall, onTurnComplete, onTurnStart } from './link'
 
 test('subagent end does not pause', () => {
   expect(onTurnComplete(LINK_INITIAL, 'a1').pause).toBe(null)
@@ -8,11 +8,6 @@ test('subagent end does not pause', () => {
 
 test('main end pauses done', () => {
   expect(onTurnComplete(LINK_INITIAL).pause).toBe('done')
-})
-
-test('needs-you outranks done', () => {
-  expect(onTurnComplete(onAsk(LINK_INITIAL)).pause).toBe('needs-you')
-  expect(onAsk(onTurnComplete(LINK_INITIAL)).pause).toBe('needs-you')
 })
 
 test('repeat end stays one pause', () => {

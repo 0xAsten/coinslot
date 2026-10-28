@@ -1,8 +1,7 @@
-import { atom, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import { applyLink, readLink } from './link-apply'
-import { readSave, writeSave } from './save-store'
+import { readSave, readSeed, writeSave } from './save-store'
 import { registerClaudeLink } from './shared/hooks-link'
 import { onResume } from './shared/link'
 
@@ -12,7 +11,7 @@ const TITLE = 'Reef Net'
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 export const register: Register = on => {
-  registerClaudeLink(on, { title: TITLE })
+  registerClaudeLink(on, { title: TITLE, paneId: PANE })
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
@@ -52,6 +51,7 @@ export const register: Register = on => {
     const { Box, Client } = $.ui.resolve(e)
     const link = await readLink($)
     const saved = await readSave($)
+    const seed = await readSeed($)
     // inline panes fit their tree, so a percentage height collapses to the placeholder
     const width = Math.max(20, e.props.bodyColumns)
     const height = Math.max(8, Math.min(e.props.scroll.bodyRows, 26))
@@ -67,6 +67,7 @@ export const register: Register = on => {
             pause: link.pause,
             bonusSeq: link.bonusSeq,
             ...(saved ? { save: saved } : {}),
+            ...(seed !== null ? { seed } : {}),
           }}
         />
       </Box>

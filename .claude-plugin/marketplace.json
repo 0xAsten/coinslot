@@ -1,5 +1,6 @@
 {
   "name": "coinslot",
+  "description": "Original terminal mini-games, each a Claude Code mod that runs in a pane beside the chat.",
   "owner": {
     "name": "beasaltfish"
   },

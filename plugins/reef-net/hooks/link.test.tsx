@@ -17,8 +17,9 @@ const PANE = {
 
 type Store = Record<string, { value: unknown; version: number }>
 
-function wire(on: (event: any, fn: (...a: any[]) => any) => void, link?: { pause: null | 'done' | 'needs-you'; bonusSeq: number }) {
-  const store: Store = {}
+function wire(on: (event: any, fn: (...a: any[]) => any) => void, link?: { pause: null | 'done'; bonusSeq: number }) {
+  // a fixed sim seed: the run is reproducible
+  const store: Store = { seed: { value: { shape: 'seed-1', value: 7 }, version: 1 } }
   if (link) store.link = { value: { shape: 'link-1', value: link }, version: 1 }
   on('state.get', (_: unknown, e: { key: string }) => ({ value: store[e.key] ?? { value: undefined, version: 0 } }))
   on('state.set', (_: unknown, e: { key: string; value: unknown }) => {
@@ -27,8 +28,8 @@ function wire(on: (event: any, fn: (...a: any[]) => any) => void, link?: { pause
 
     return { value: { isSet: true, version } }
   })
-  const link_ = (): { pause: null | 'done' | 'needs-you'; bonusSeq: number } =>
-    (store.link?.value as { value: { pause: null | 'done' | 'needs-you'; bonusSeq: number } }).value
+  const link_ = (): { pause: null | 'done'; bonusSeq: number } =>
+    (store.link?.value as { value: { pause: null | 'done'; bonusSeq: number } }).value
   const save_ = () => (store.save?.value as { value: unknown } | undefined)?.value
 
   return { store, link: link_, save: save_ }
@@ -64,19 +65,12 @@ test('opening the pane clears a stale done pause', async ($, on) => {
 })
 
 test('pause props draw the overlay copy', async ($, on) => {
-  const h = wire(on, { pause: 'done', bonusSeq: 0 })
+  wire(on, { pause: 'done', bonusSeq: 0 })
   const ui = await $.ui.mount(PANE)
   await ui.resize({ columns: 70, rows: 20, in: 'reef' })
   await ui.advance(100)
   expect(await ui.find({ type: 'Text', text: /CLAUDE IS DONE · ESC TO RETURN/, in: 'reef' })).toBeDefined()
   await ui.unmount()
-
-  h.store.link = { value: { shape: 'link-1', value: { pause: 'needs-you', bonusSeq: 0 } }, version: 2 }
-  const ui2 = await $.ui.mount(PANE)
-  await ui2.resize({ columns: 70, rows: 20, in: 'reef' })
-  await ui2.advance(100)
-  expect(await ui2.find({ type: 'Text', text: /CLAUDE NEEDS YOU · ESC TO RETURN/, in: 'reef' })).toBeDefined()
-  await ui2.unmount()
 })
 
 test('bonusSeq +2 spawns two golden fish', async ($, on) => {
@@ -135,7 +129,7 @@ test('remount restores coins, bet and caught count', async ($, on) => {
   await ui.advance(1500)
   const saved = h.save() as { coins: number; bet: number; caughtCount: number }
   expect(saved.bet).toBe(2)
-  expect(saved.coins).toBeLessThan(200)
+  expect(saved.coins).toBe(198)
   await ui.unmount()
 
   // the engine remounts the Client with a fresh instance and the stored snapshot
@@ -156,6 +150,23 @@ test('a key while paused posts resume', async ($, on) => {
   await ui.advance(100)
   expect(h.link().pause).toBe('done')
   await ui.key({ key: ' ', in: 'reef' })
+  await ui.advance(100)
+  expect(h.link().pause).toBe(null)
+  await ui.unmount()
+})
+
+test('ui.message resume clears the pause a turn end set', async ($, on) => {
+  const h = wire(on, idle)
+  on('ui.panes', () => ({ value: [{ id: 'reef-net', title: 'Reef Net', isShown: true, isFocused: false, isPlaced: true }] }))
+  on('ui.notify', () => ({ value: { isSent: true, channel: 'terminal_bell' } }))
+  on('turn.complete', () => ({ text: '' }))
+  await $.turn.complete({ answer: '', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' })
+  expect(h.link().pause).toBe('done')
+
+  const ui = await $.ui.mount(PANE)
+  await ui.resize({ columns: 70, rows: 20, in: 'reef' })
+  await ui.advance(100)
+  await ui.pointer({ type: 'down', x: 30, y: 8, button: 'left', in: 'reef' })
   await ui.advance(100)
   expect(h.link().pause).toBe(null)
   await ui.unmount()

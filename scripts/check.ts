@@ -14,6 +14,7 @@ if (names.length === 0) {
 }
 
 function run(plugin: string, step: string, cmd: string[], okOnNoTests = false): void {
+  // okOnNoTests is only for _probe, the one plugin that carries no tests
   const p = Bun.spawnSync(cmd, { cwd: root, stdout: 'pipe', stderr: 'pipe' })
   const out = p.stdout.toString() + p.stderr.toString()
   if (p.exitCode !== 0) {
@@ -27,6 +28,9 @@ function run(plugin: string, step: string, cmd: string[], okOnNoTests = false): 
   }
   console.log(`  ${step}: ok`)
 }
+
+// The marketplace file and every manifest in one run, before the per-plugin steps.
+run('(repo)', 'validate marketplace', ['claude', 'plugin', 'validate', root])
 
 for (const name of names) {
   const dir = join(pluginsDir, name)
@@ -62,9 +66,10 @@ for (const name of names) {
     }
   }
 
-  // shared/ is not a plugin, so `claude plugin test` cannot reach its tests. The
-  // _shared-tests plugin carries the bundled copy (shared/*.test.ts included) and
-  // runs them where claude-code/testing resolves; it ships in no marketplace entry.
-  run(name, 'test', ['claude', 'plugin', 'test', dir], true)
+  // shared/ is not a plugin, so `claude plugin test` cannot reach its tests.
+  // _shared-tests exists to host them while there are no games: it carries the
+  // bundled copy (shared/*.test.ts included) and runs them where claude-code/testing
+  // resolves; it ships in no marketplace entry.
+  run(name, 'test', ['claude', 'plugin', 'test', dir], name === '_probe')
 }
 console.log('check: all ok')

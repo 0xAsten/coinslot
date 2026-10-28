@@ -12,7 +12,7 @@ import type { LinkState } from './link'
 // failed hook back to the engine so a bug here can never block a tool.
 // tool.check is deliberately not wired: the probe showed `ask` fires for
 // calls that never prompt anyone (docs/probe-findings.md).
-export function registerClaudeLink(on: On, opts: { title: string }): void {
+export function registerClaudeLink(on: On, opts: { title: string; paneId: string }): void {
   on('turn.start', async ($, e, next) => {
     await applyLink($, s => onTurnStart(s, e.agentId))
 
@@ -20,6 +20,9 @@ export function registerClaudeLink(on: On, opts: { title: string }): void {
   }).catch(($, e, next) => next(e))
 
   on('turn.complete', async ($, e, next) => {
+    // Pause and notify only for a game the person actually has open: a closed pane
+    // has nothing to pause, and a notification for it would be noise.
+    if (e.agentId !== undefined || !(await $.ui.panes()).some(p => p.id === opts.paneId && p.isPlaced)) return next(e)
     let before: LinkState['pause'] = null
     const after = await applyLink($, s => {
       before = s.pause

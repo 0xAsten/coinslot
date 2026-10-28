@@ -35,9 +35,9 @@ Status: RUN 2026-10-28 16:37–16:41 local, Claude Code 2.1.312, author's termin
 Which layers work (pane props live update, background tick, focus awareness, turn/tool events, notify), and which are impossible (Task 3 drops those layers per spec section 13):
 
 - **Layer 1, "Claude is done": works.** Main `turn.complete` (no agentId) reaches a running, unfocused Client within the same second.
-- **Layer 1, "Claude needs you": partly.** `AskUserQuestion` tool.call (main) is a reliable signal. Permission prompts have no reliable signal yet — `tool.check -> ask` fires for calls that never prompt. Dropped for now (spec §13: ship what works); revisit if a later probe finds the permission dialog's own render event.
+- **Layer 1, "Claude needs you": dropped.** `AskUserQuestion` tool.call (main) is a reliable signal, but the engine hides the pane while the dialog is up, so an overlay is never seen in time (see the live check below). Permission prompts have no reliable signal either: `tool.check -> ask` fires for calls that never prompt.
 - **Layer 2, bonuses on tool calls: works.** One `tool.call` per tool; filter to main turns or count subagent calls too (they are Claude working).
-- **Focus-pause: works.** `isFocused` reaches the Client; the tick keeps running unfocused, so the game must skip `step` itself.
+- **Focus-pause: dropped.** `isFocused` reaches the Client, but in the inline layout the pane reads `isFocused` false the whole time (see the live check below), so focus cannot gate play. Plan 2 games decide on an idle auto-pause instead.
 - **System notification: works only if the user configured a channel.** `no-channel` here. Keep the call (silent when unsent) and document `preferredNotifChannel` in the README. 
 
 ## Follow-up: the Client remounts when a dialog opens and closes
