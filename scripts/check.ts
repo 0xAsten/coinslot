@@ -17,7 +17,7 @@ function run(plugin: string, step: string, cmd: string[], okOnNoTests = false): 
   const p = Bun.spawnSync(cmd, { cwd: root, stdout: 'pipe', stderr: 'pipe' })
   const out = p.stdout.toString() + p.stderr.toString()
   if (p.exitCode !== 0) {
-    if (okOnNoTests && /no test files|no tests found/i.test(out)) {
+    if (okOnNoTests && /no test files|no tests found|no \*\.test\.ts/i.test(out)) {
       console.log(`  ${step}: no tests (ok)`)
       return
     }
