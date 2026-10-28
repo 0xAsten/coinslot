@@ -9,6 +9,11 @@
       "name": "fish-shooter",
       "source": "./plugins/fish-shooter",
       "description": "An original arcade fish-shooter game for Claude Code. Pauses when Claude finishes and drops golden fish while Claude works."
+    },
+    {
+      "name": "brick-breaker",
+      "source": "./plugins/brick-breaker",
+      "description": "An original arcade brick-breaker game for Claude Code. Bursts bricks into sparks, pauses when Claude finishes and drops power-up capsules while Claude works."
     }
   ]
 }
