@@ -8,6 +8,6 @@ export const register: Register = on => {
     title: 'Brick Breaker',
     command: 'brick-breaker',
     description: 'Open the Brick Breaker arcade game in a pane',
-    opened: 'Brick Breaker opened. Move the mouse or tap the arrow keys; esc returns to chat.',
+    opened: 'Brick Breaker opened. Move the mouse or tap the arrow keys; p pauses; esc returns to chat.',
   })
 }

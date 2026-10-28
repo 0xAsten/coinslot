@@ -6,7 +6,7 @@ import type { Creature, Game } from './sim'
 import type { Cells } from './shared/cells'
 
 const STOPS = [0xb2f4e8, 0x4ad6d6, 0x1aa8ca, 0x0e80b6, 0x0a5a8a]
-const HINT = 'click/space fire · ←→ aim · ↑↓ bet · esc back to chat'
+const HINT = 'click/space fire · ←→ aim · ↑↓ bet · p pause · esc back to chat'
 
 const rgb = (c: number): [number, number, number] => [
   (c >> 16) & 255,

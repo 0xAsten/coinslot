@@ -24,8 +24,6 @@ export type Policy = {
   start: boolean
   // escape pauses a running game (a game that has no use for escape keeps it free)
   escape: boolean
-  // pause after this long without a key or pointer input; null never
-  idleMs: number | null
 }
 
 // `h` is pixels: two per terminal row.
@@ -64,7 +62,6 @@ type Ctl<G, I> = {
   seenBonus: number
   hold: Hold
   restore?: JsonValue
-  idleTicks: number
   ticksSinceSave: number
   lastSent?: string
   wasHeld: boolean
@@ -122,7 +119,6 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
       props,
       seenBonus: props.bonusSeq,
       hold: restore !== undefined ? 'paused' : spec.policy.start ? 'start' : null,
-      idleTicks: 0,
       ticksSinceSave: 0,
       wasHeld: false,
       n: 0,
@@ -216,15 +212,11 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
         sendSave()
       }
 
-      mine.idleTicks += 1
-      const idle = spec.policy.idleMs
-      if (idle !== null && mine.idleTicks >= idle / TICK_MS) mine.hold = 'paused'
       redraw()
     })
 
     // Any input but escape-while-running ends a hold; a link pause is cleared by a post.
     const release = (): void => {
-      mine.idleTicks = 0
       mine.hold = null
       if (mine.props.pause !== null) surface.post({ type: 'resume' })
       redraw()
@@ -235,7 +227,6 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
         if (e.type === 'down') release()
         return
       }
-      if (e.type === 'down' || e.type === 'move') mine.idleTicks = 0
       mine.input = spec.pointer(e, mine.input)
     })
 
@@ -244,8 +235,8 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
         if (e.key !== 'escape') release()
         return
       }
-      mine.idleTicks = 0
-      if (e.key === 'escape' && spec.policy.escape) {
+      // p is the shell's pause key: consumed here, never sent to the game
+      if (e.key === 'p' || e.key === 'P' || (e.key === 'escape' && spec.policy.escape)) {
         mine.hold = 'paused'
         redraw()
         return

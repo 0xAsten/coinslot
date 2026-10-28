@@ -89,22 +89,55 @@ test('escape pauses and any key resumes', async ($, on) => {
   await ui.unmount()
 })
 
-test('idle pause after idleMs without input', async ($, on) => {
+test('p pauses and any key resumes', async ($, on) => {
   wire(on)
   const ui = await open($)
   await press(ui, 'x')
-  await ui.advance(3100)
+  await press(ui, 'p')
   expect(await has(ui, /PAUSED · PRESS ANY KEY/)).toBe(true)
-  await ui.unmount()
+  const a = await frame(ui)
+  await ui.advance(1000)
+  expect(await frame(ui)).toBe(a)
 
-  const busy = await open($)
-  await press(busy, 'x')
-  for (let i = 0; i < 6; i++) {
-    await busy.advance(1000)
-    await press(busy, 'x')
+  await press(ui, 'x')
+  await ui.advance(100)
+  expect(await has(ui, /PAUSED/)).toBe(false)
+  expect(await frame(ui)).not.toBe(a)
+  await ui.unmount()
+})
+
+test('p is not forwarded to the game', async ($, on) => {
+  wire(on)
+  const ui = await open($)
+  await press(ui, 'x')
+  for (const k of ['p', 'P']) {
+    await press(ui, k) // pauses; the dummy shows the last key it was handed
+    expect(await has(ui, /PAUSED/)).toBe(true)
+    expect(await has(ui, /key [pP]\b/)).toBe(false)
+    await press(ui, 'y') // resumes, and is consumed by the hold too
   }
-  expect(await has(busy, /PAUSED/)).toBe(false)
-  await busy.unmount()
+  await ui.advance(200)
+  expect(await has(ui, /key [pP]\b/)).toBe(false)
+  await ui.unmount()
+})
+
+test('p dismisses the start banner like any key', async ($, on) => {
+  wire(on)
+  const ui = await open($)
+  expect(await has(ui, /PRESS ANY KEY TO START/)).toBe(true)
+  await press(ui, 'p')
+  expect(await has(ui, /PRESS ANY KEY TO START/)).toBe(false)
+  expect(await has(ui, /PAUSED/)).toBe(false)
+  await ui.unmount()
+})
+
+test('no input for 10 s never pauses', async ($, on) => {
+  wire(on)
+  const ui = await open($)
+  await press(ui, 'x')
+  await ui.advance(10000)
+  expect(await has(ui, /PAUSED/)).toBe(false)
+  await ui.unmount()
 })
 
 test('a remount with a save comes back paused with that state', async ($, on) => {
@@ -199,7 +232,7 @@ test('save is posted every 30 ticks only when it changed', async ($, on) => {
   await ui.advance(1100)
   expect(h.saves.length).toBe(1)
   for (let i = 0; i < 3; i++) {
-    await ui.advance(900) // keys keep the idle pause away
+    await ui.advance(900)
     await ui.key({ key: 'x', in: 'game' })
   }
   // ~82 more ticks, one post per 30

@@ -20,7 +20,7 @@ function write(c: Cells, row: number, text: string): void {
 
 export const SPEC: GameSpec<G, I> = {
   title: 'Dummy',
-  policy: { start: true, escape: true, idleMs: 3000 },
+  policy: { start: true, escape: true },
   create: (cols, h) => ({ w: cols, h, x: 0, counter: 0, bonus: 0, frozen: false, last: '-', clicks: 0 }),
   resize: (g, cols, h) => {
     // a save the dummy cannot make sense of: the shell must survive it

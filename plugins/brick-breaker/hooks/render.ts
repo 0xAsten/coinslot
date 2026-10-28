@@ -5,7 +5,7 @@ import type { Game } from './sim'
 
 import type { Cells } from './shared/cells'
 
-const HINT = 'mouse/←→ move · space launch · esc back to chat'
+const HINT = 'mouse/←→ move · space launch · p pause'
 const SKY_TOP = 0x0b0d2a
 const SKY_BOTTOM = 0x241a4a
 const WHITE = 0xffffff

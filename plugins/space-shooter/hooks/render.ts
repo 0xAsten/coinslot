@@ -5,7 +5,7 @@ import type { Enemy, Game } from './sim'
 
 import type { Cells } from './shared/cells'
 
-const HINT = 'mouse/arrows move · auto-fire · esc back to chat'
+const HINT = 'mouse/arrows move · auto-fire · p pause'
 const SKY_TOP = 0x05061c
 const SKY_BOTTOM = 0x1a1540
 const WHITE = 0xffffff

@@ -54,6 +54,9 @@ test('opens on PRESS ANY KEY TO START, a key launches play, HUD shows score and 
     // the ball left the paddle: the hint never comes back
     expect(await hintSeen(5)).toBe(false)
     expect(await ui.find({ type: 'Text', text: /SCORE \d+/, in: 'game' })).toBeDefined()
+    await ui.key({ key: 'p', in: 'game' })
+    await ui.advance(100)
+    expect(await ui.find({ type: 'Text', text: /PAUSED · PRESS ANY KEY/, in: 'game' })).toBeDefined()
     await ui.unmount()
   }
 })

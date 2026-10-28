@@ -8,6 +8,6 @@ export const register: Register = on => {
     title: 'Fish Shooter',
     command: 'fish-shooter',
     description: 'Open the Fish Shooter arcade game in a pane',
-    opened: 'Fish Shooter opened. Click the pane to aim; esc returns to chat.',
+    opened: 'Fish Shooter opened. Click the pane to aim; p pauses; esc returns to chat.',
   })
 }

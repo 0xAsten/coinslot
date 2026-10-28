@@ -8,6 +8,6 @@ export const register: Register = on => {
     title: 'Space Shooter',
     command: 'space-shooter',
     description: 'Open the Space Shooter arcade game in a pane',
-    opened: 'Space Shooter opened. Move the mouse or tap the arrow keys; esc returns to chat.',
+    opened: 'Space Shooter opened. Move the mouse or tap the arrow keys; p pauses; esc returns to chat.',
   })
 }

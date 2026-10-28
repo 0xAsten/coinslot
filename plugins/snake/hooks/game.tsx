@@ -24,11 +24,10 @@ function pointer(e: ClientPointerEvent, i: Input): Input {
 }
 
 // The whole run is saved; a remount (dialog open/close) resumes it paused.
-// Esc never reaches the Client in a real session, so the only away-pause is the idle one.
 export const SPEC: GameSpec<Game, Input> = {
   title: 'Snake',
   hint: 'Snake: click here to focus, then steer with the arrow keys.',
-  policy: { start: true, escape: true, idleMs: 6000 },
+  policy: { start: true, escape: true },
   create: (cols, h, seed) => newGame(cols, h, seed),
   resize,
   step,

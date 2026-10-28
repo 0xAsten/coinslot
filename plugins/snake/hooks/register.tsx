@@ -8,6 +8,6 @@ export const register: Register = on => {
     title: 'Snake',
     command: 'snake',
     description: 'Open the Snake arcade game in a pane',
-    opened: 'Snake opened. Tap the arrow keys or WASD to steer; it pauses after a few idle seconds; esc returns to chat.',
+    opened: 'Snake opened. Tap the arrow keys or WASD to steer; p pauses; esc returns to chat.',
   })
 }

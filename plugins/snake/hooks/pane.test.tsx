@@ -43,6 +43,9 @@ test('opens on PRESS ANY KEY TO START, a key starts play, HUD shows score', asyn
     await ui.advance(300)
     expect(await ui.find({ type: 'Text', text: /GAME OVER/, in: 'game' })).toBeUndefined()
     expect(await ui.find({ type: 'Text', text: /SCORE \d+/, in: 'game' })).toBeDefined()
+    await ui.key({ key: 'p', in: 'game' })
+    await ui.advance(100)
+    expect(await ui.find({ type: 'Text', text: /PAUSED · PRESS ANY KEY/, in: 'game' })).toBeDefined()
     await ui.unmount()
   }
 })

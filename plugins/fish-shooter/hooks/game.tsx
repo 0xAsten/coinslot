@@ -52,7 +52,7 @@ function pointer(e: ClientPointerEvent, i: Input): Input {
 export const SPEC: GameSpec<Game, Input> = {
   title: 'Fish Shooter',
   hint: 'Fish Shooter: click here to focus, then fire.',
-  policy: { start: false, escape: false, idleMs: null },
+  policy: { start: false, escape: false },
   create: (cols, h, seed) => newGame(cols, h, seed),
   resize,
   step,

@@ -5,7 +5,7 @@ import type { Cell, Game } from './sim'
 
 import type { Cells } from './shared/cells'
 
-const HINT = 'arrows/WASD steer'
+const HINT = 'arrows/WASD · p pause'
 const FIELD_TOP = 0x0d1f1a
 const FIELD_BOTTOM = 0x16342a
 const FRAME = 0x5f9a72

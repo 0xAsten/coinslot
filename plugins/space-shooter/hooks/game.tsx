@@ -37,11 +37,10 @@ function pointer(e: ClientPointerEvent, i: Input): Input {
 }
 
 // The whole run is saved; a remount (dialog open/close) resumes it paused.
-// Esc never reaches a Client in Claude Code, so the idle timeout is the away-pause.
 export const SPEC: GameSpec<Game, Input> = {
   title: 'Space Shooter',
   hint: 'Space Shooter: click here to focus, then steer the ship.',
-  policy: { start: true, escape: true, idleMs: 3000 },
+  policy: { start: true, escape: true },
   create: (cols, h, seed) => newGame(cols, h, seed),
   resize,
   step,

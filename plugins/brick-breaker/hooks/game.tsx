@@ -41,7 +41,7 @@ function pointer(e: ClientPointerEvent, i: Input): Input {
 export const SPEC: GameSpec<Game, Input> = {
   title: 'Brick Breaker',
   hint: 'Brick Breaker: click here to focus, then move the paddle.',
-  policy: { start: true, escape: true, idleMs: null },
+  policy: { start: true, escape: true },
   create: (cols, h, seed) => newGame(cols, h, seed),
   resize,
   step,

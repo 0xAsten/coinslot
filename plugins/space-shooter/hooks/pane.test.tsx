@@ -41,6 +41,9 @@ test('opens on PRESS ANY KEY TO START, a key starts play, HUD shows score and li
     // auto-fire: the ship needs no key to shoot, and the run goes on
     await ui.advance(1000)
     expect(await ui.find({ type: 'Text', text: /SCORE \d+/, in: 'game' })).toBeDefined()
+    await ui.key({ key: 'p', in: 'game' })
+    await ui.advance(100)
+    expect(await ui.find({ type: 'Text', text: /PAUSED · PRESS ANY KEY/, in: 'game' })).toBeDefined()
     await ui.unmount()
   }
 })
