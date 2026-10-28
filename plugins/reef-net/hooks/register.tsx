@@ -1,9 +1,10 @@
 import { atom, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-import { readLink } from './link-apply'
+import { applyLink, readLink } from './link-apply'
 import { readSave, writeSave } from './save-store'
 import { registerClaudeLink } from './shared/hooks-link'
+import { onResume } from './shared/link'
 
 const PANE = 'reef-net'
 const TITLE = 'Reef Net'
@@ -23,6 +24,8 @@ export const register: Register = on => {
   })
 
   on('command.run', { command: 'reef' }, async $ => {
+    // the person just chose to play: a pause left from the last turn is stale
+    await applyLink($, onResume)
     await $.ui.open({ id: PANE, title: TITLE, focus: true, rows: 28 })
 
     return { text: 'Reef Net opened. Click the pane to aim; esc returns to chat.' }
@@ -61,7 +64,6 @@ export const register: Register = on => {
           width={width}
           height={height}
           props={{
-            focused: e.props.isFocused,
             pause: link.pause,
             bonusSeq: link.bonusSeq,
             ...(saved ? { save: saved } : {}),

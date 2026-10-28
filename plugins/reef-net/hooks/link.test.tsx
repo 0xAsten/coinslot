@@ -40,19 +40,28 @@ const idle = { pause: null, bonusSeq: 0 } as const
 const game = async (ui: { drawn: (s: { in: string }) => Promise<unknown> }) =>
   JSON.stringify(await ui.drawn({ in: 'reef' })).replace(/ t:\d{5}/g, ' t:')
 
-test('unfocused props stop the tick', async ($, on) => {
-  wire(on, idle)
-  const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, isFocused: false } })
+test('a pause stops the tick and playing resumes it', async ($, on) => {
+  const h = wire(on, { pause: 'done', bonusSeq: 0 })
+  const ui = await $.ui.mount(PANE)
   await ui.resize({ columns: 70, rows: 20, in: 'reef' })
   await ui.advance(100)
   const a = await game(ui)
   await ui.advance(1000)
   expect(await game(ui)).toBe(a)
 
-  await ui.redraw({ ...PANE.props, isFocused: true })
+  h.store.link = { value: { shape: 'link-1', value: idle }, version: 2 }
+  await ui.redraw()
   await ui.advance(1000)
   expect(await game(ui)).not.toBe(a)
   await ui.unmount()
+})
+
+test('opening the pane clears a stale done pause', async ($, on) => {
+  const h = wire(on, { pause: 'done', bonusSeq: 0 })
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('command.register', () => ({ value: { command: 'reef' } }))
+  await $.command.run({ command: 'reef', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })
+  expect(h.link().pause).toBe(null)
 })
 
 test('pause props draw the overlay copy', async ($, on) => {

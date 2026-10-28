@@ -5,13 +5,11 @@ import { newGame, resize, spawnBonus, step } from './sim'
 import type { Game, Input } from './sim'
 import { toRuns, hex } from './shared/cells'
 import type { Cells } from './shared/cells'
-import { GATE_INITIAL, gateStep } from './focus-gate'
-import type { Gate } from './focus-gate'
 import type { Pause } from './shared/link'
 import { drawOverlay, drawSizeNotice } from './shared/overlay'
 
 export type Snapshot = { coins: number; bet: number; caughtCount: number }
-type Props = { focused: boolean; pause: Pause; bonusSeq: number; save?: Snapshot }
+type Props = { pause: Pause; bonusSeq: number; save?: Snapshot }
 
 type Ctl = {
   game?: Game
@@ -23,10 +21,7 @@ type Ctl = {
   ticksSinceSave: number
   lastSent?: Snapshot
   wasPaused: boolean
-  gate: Gate
-  touched: boolean
   // debug readout for the live round; remove once focus is confirmed
-  lastKey: string
   ticks: number
 }
 type State = { ctl: Ctl; n: number }
@@ -60,9 +55,6 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
       seenBonus: props.bonusSeq,
       ticksSinceSave: 0,
       wasPaused: false,
-      gate: GATE_INITIAL,
-      touched: false,
-      lastKey: '-',
       ticks: 0,
     }
     if (props.save) ctl.restore = props.save
@@ -90,9 +82,6 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
       if (p.pause !== null && !mine.wasPaused) sendSave()
       mine.wasPaused = p.pause !== null
 
-      const gated = gateStep(mine.gate, { focused: p.focused, paused: p.pause !== null, touched: mine.touched })
-      mine.gate = gated.gate
-      mine.touched = false
       mine.ticks += 1
 
       const tooSmall = cols < MIN_COLS || rows < MIN_ROWS
@@ -111,7 +100,7 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
         mine.game = resize(mine.game, cols, rows * 2)
       }
 
-      if (!gated.active) {
+      if (p.pause !== null) {
         mine.pending = {}
         // every 15th tick also redraws so the debug readout stays live
         if (changed || mine.ticks % 15 === 0) surface.setState({ ctl: mine, n })
@@ -139,7 +128,6 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
         return
       }
       if (e.type !== 'move' && e.type !== 'down') return
-      if (e.type === 'down') mine.touched = true
       const aimTo = { x: e.x + 0.5, y: e.y * 2 + 1 }
       mine.pending = { ...mine.pending, aimTo }
       if (e.type === 'down' && e.button === 'left') mine.pending.fire = true
@@ -150,8 +138,6 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
         if (e.key !== 'escape') surface.post({ type: 'resume' })
         return
       }
-      mine.touched = true
-      mine.lastKey = e.key === ' ' ? 'space' : e.key
       const p = { ...mine.pending }
       switch (e.key) {
         case ' ':
@@ -191,7 +177,7 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
   if (cols > 0 && rows > 0 && (cols < MIN_COLS || rows < MIN_ROWS)) {
     cells = drawSizeNotice(cols, rows)
   } else if (ctl.game) {
-    const dbg = `f:${props.focused ? 1 : 0} p:${props.pause === null ? '-' : props.pause === 'done' ? 'd' : 'n'} ${cols}×${rows} k:${ctl.lastKey} t:${String(ctl.ticks % 100000).padStart(5, '0')}`
+    const dbg = `p:${props.pause === null ? '-' : props.pause === 'done' ? 'd' : 'n'} ${cols}×${rows} t:${String(ctl.ticks % 100000).padStart(5, '0')}`
     cells = renderCells(ctl.game, true, dbg)
     if (props.pause !== null) cells = drawOverlay(cells, props.pause)
   }

@@ -18,7 +18,7 @@
 - Inline pane: never `height="100%"`; Client gets `width = max(20, e.props.bodyColumns)`, `height = clamp(e.props.scroll.bodyRows, 8, 26)`; `$.ui.open` passes `rows: 28`.
 - Minimum play area 40 cols × 10 rows; below it the Client draws `Make the terminal wider or taller (40×10) · now <cols>×<rows>`
 - Target 30 fps: Client tick 33 ms.
-- Pause when the pane is unfocused; resume when focus returns. Esc always returns focus to the chat.
+- Claude Code gives no reliable focus signal in the inline layout (`isFocused` measured always false). Games do not pause on unfocus. Each game decides in Plan 2 whether it needs an idle auto-pause (for example, no key for N seconds shows PAUSED · PRESS ANY KEY). Esc always returns focus to the chat.
 - TypeScript ≥5.9 (`typescript@5.9.3`); engine tsconfig targets es2023.
 - No "Claude" in any plugin name or command; descriptions say "for Claude Code". License MIT.
 - Install line format, verbatim: `/plugin install <game> --marketplace beasaltfish/coinslot`.

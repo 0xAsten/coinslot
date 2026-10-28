@@ -39,7 +39,7 @@
 - **平台**：Claude Code mod API（本机 2.1.312；mod 自 v2.1.287 起可用）。只支持终端（terminal surface）。
 - **默认布局是上下排列**：默认（非全屏）布局下，面板**嵌在对话下方、输入框上方**（`placement: 'inline'`）。全屏布局且终端 ≥110 列时，面板才会停靠在对话旁边（`dock`）。两种情况都要正常显示；推广素材按 inline 来做。
 - **inline 面板的高度跟着内容走**：给 `Client` 写 `height="100%"`，高度会塌缩到占位那一行（reef-net 实际踩过这个坑）。必须用 `e.props.bodyColumns` 和 `e.props.scroll.bodyRows` 给出明确的宽高，并在 `$.ui.open` 时传 `rows`。
-- **失焦就暂停**：面板失去键盘焦点时游戏暂停，焦点回来时继续，一局不强制做短。
+- **不因失焦暂停**：Claude Code 在内联布局里没有可靠的焦点信号（实测 `isFocused` 始终为 false）。游戏不在失焦时暂停；每个游戏在 Plan 2 里自行决定是否需要空闲自动暂停（例如 N 秒没有按键就显示 PAUSED · PRESS ANY KEY）。
 - **类型检查**要用 TypeScript ≥5.9。引擎生成的 tsconfig 的 target 是 es2023，5.4 不认识。
 - **品牌**：名字里不出现 “Claude”（避免商标风险），介绍里写 “for Claude Code”。
 - **许可证**：MIT。
