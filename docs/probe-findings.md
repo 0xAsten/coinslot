@@ -47,3 +47,10 @@ The author noticed the tick counter restart whenever Claude asked them something
 Consequence: a game that keeps its state only in the Client loses the run every time Claude asks a question, which is exactly the moment layer 1 pauses it. Each game must save a snapshot outside the Client (hooks-side `$.state`, fed by `surface.post`) and restore from it on mount.
 
 The Bash call in scenario (b) ran without a prompt because the session was in auto mode, so no permission dialog was ever shown in this run; whether one also remounts the pane is untested (assume it does).
+
+## reef-net live check (2026-10-28, build bcb7dff)
+
+- `/reef` after a finished turn opens without a stale overlay (fix in bcb7dff).
+- Pane `isFocused` reads false the whole time in the inline layout (debug readout `f:0`), so focus cannot gate play. The unfocused pause was dropped.
+- AskUserQuestion: the engine **hides the pane while the dialog is up** and restores it afterwards. Coins survived the remount, so save/restore works. A `needs-you` overlay is never seen in time and was stale on return, so AskUserQuestion no longer pauses.
+- Golden bonus fish could not be told apart from the yellow small fish, so they were redesigned.
