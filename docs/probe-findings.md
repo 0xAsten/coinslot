@@ -39,3 +39,11 @@ Which layers work (pane props live update, background tick, focus awareness, tur
 - **Layer 2, bonuses on tool calls: works.** One `tool.call` per tool; filter to main turns or count subagent calls too (they are Claude working).
 - **Focus-pause: works.** `isFocused` reaches the Client; the tick keeps running unfocused, so the game must skip `step` itself.
 - **System notification: works only if the user configured a channel.** `no-channel` here. Keep the call (silent when unsent) and document `preferredNotifChannel` in the README. 
+
+## Follow-up: the Client remounts when a dialog opens and closes
+
+The author noticed the tick counter restart whenever Claude asked them something. The pasted header lines agree: `tick 941` → `tick 48` → `tick 215` at 3.9/s puts one remount at ~16:39:51 (inside the AskUserQuestion dialog, 16:39:43–16:40:03) and another at ~16:40:00 (as it closed). The tick lives in the Client's local state, so a reset means the engine dropped the instance and made a new one.
+
+Consequence: a game that keeps its state only in the Client loses the run every time Claude asks a question, which is exactly the moment layer 1 pauses it. Each game must save a snapshot outside the Client (hooks-side `$.state`, fed by `surface.post`) and restore from it on mount.
+
+The Bash call in scenario (b) ran without a prompt because the session was in auto mode, so no permission dialog was ever shown in this run; whether one also remounts the pane is untested (assume it does).
