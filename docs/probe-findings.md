@@ -54,3 +54,5 @@ The Bash call in scenario (b) ran without a prompt because the session was in au
 - Pane `isFocused` reads false the whole time in the inline layout (debug readout `f:0`), so focus cannot gate play. The unfocused pause was dropped.
 - AskUserQuestion: the engine **hides the pane while the dialog is up** and restores it afterwards. Coins survived the remount, so save/restore works. A `needs-you` overlay is never seen in time and was stale on return, so AskUserQuestion no longer pauses.
 - Golden bonus fish could not be told apart from the yellow small fish, so they were redesigned.
+
+Passed on c46fd20: bonus fish recognisable, done overlay at turn end, click/key resumes, coins survive the dialog.

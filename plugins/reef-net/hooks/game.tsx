@@ -21,8 +21,6 @@ type Ctl = {
   ticksSinceSave: number
   lastSent?: Snapshot
   wasPaused: boolean
-  // debug readout for the live round; remove once focus is confirmed
-  ticks: number
 }
 type State = { ctl: Ctl; n: number }
 
@@ -55,7 +53,6 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
       seenBonus: props.bonusSeq,
       ticksSinceSave: 0,
       wasPaused: false,
-      ticks: 0,
     }
     if (props.save) ctl.restore = props.save
     const mine = ctl
@@ -82,7 +79,6 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
       if (p.pause !== null && !mine.wasPaused) sendSave()
       mine.wasPaused = p.pause !== null
 
-      mine.ticks += 1
 
       const tooSmall = cols < MIN_COLS || rows < MIN_ROWS
       if (tooSmall) return
@@ -102,8 +98,7 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
 
       if (p.pause !== null) {
         mine.pending = {}
-        // every 15th tick also redraws so the debug readout stays live
-        if (changed || mine.ticks % 15 === 0) surface.setState({ ctl: mine, n })
+        if (changed) surface.setState({ ctl: mine, n })
         return
       }
 
@@ -177,8 +172,7 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
   if (cols > 0 && rows > 0 && (cols < MIN_COLS || rows < MIN_ROWS)) {
     cells = drawSizeNotice(cols, rows)
   } else if (ctl.game) {
-    const dbg = `p:${props.pause === null ? '-' : props.pause === 'done' ? 'd' : 'n'} ${cols}×${rows} t:${String(ctl.ticks % 100000).padStart(5, '0')}`
-    cells = renderCells(ctl.game, true, dbg)
+    cells = renderCells(ctl.game)
     if (props.pause !== null) cells = drawOverlay(cells, props.pause)
   }
   if (!cells) return <Text dimColor>Reef Net: click here to focus, then fire.</Text>

@@ -36,9 +36,8 @@ function wire(on: (event: any, fn: (...a: any[]) => any) => void, link?: { pause
 
 const idle = { pause: null, bonusSeq: 0 } as const
 
-// the debug readout in the HUD counts ticks; the game itself must not move
 const game = async (ui: { drawn: (s: { in: string }) => Promise<unknown> }) =>
-  JSON.stringify(await ui.drawn({ in: 'reef' })).replace(/ t:\d{5}/g, ' t:')
+  JSON.stringify(await ui.drawn({ in: 'reef' }))
 
 test('a pause stops the tick and playing resumes it', async ($, on) => {
   const h = wire(on, { pause: 'done', bonusSeq: 0 })
