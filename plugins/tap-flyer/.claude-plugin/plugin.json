@@ -1,0 +1,9 @@
+{
+  "name": "tap-flyer",
+  "version": "0.1.0",
+  "description": "An original tap-to-fly game for Claude Code. Thread your ember through gaps in scrolling pillars. Pauses when Claude finishes; Claude's tool calls drop glowing coins.",
+  "author": {
+    "name": "beasaltfish"
+  },
+  "license": "MIT"
+}

@@ -2,6 +2,9 @@ import { expect, test } from 'claude-code/testing'
 
 import type { LinkState } from './link'
 
+// plugins/<name>/hooks/shared/ in a bundled copy; the host has no such path
+const PLUGIN = /plugins\/([^/]+)\/hooks\/shared\//.exec((import.meta as unknown as { url?: string }).url ?? '')?.[1] ?? 'game'
+
 type Wired = { held: () => LinkState; notes: string[] }
 
 // The host plugin registers the shared hooks (paneId 'game' here). State is an
@@ -16,9 +19,9 @@ function wire(on: (event: any, fn: (...a: any[]) => any) => void, open: boolean)
     return { value: { isSet: true, version: stored.version } }
   })
   on('ui.panes', () => ({
-    // the host registers paneId 'game'; reef-net's bundled copy runs it as 'reef-net'
+    // the host registers paneId 'game'; a game's bundled copy runs it under its own plugin name
     value: open
-      ? ['game', 'reef-net'].map(id => ({ id, title: id, isShown: true, isFocused: false, isPlaced: true }))
+      ? ['game', PLUGIN].map(id => ({ id, title: id, isShown: true, isFocused: false, isPlaced: true }))
       : [],
   }))
   on('ui.notify', (_: unknown, e: { text: string }) => {

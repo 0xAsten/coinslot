@@ -1,0 +1,9 @@
+{
+  "name": "snake",
+  "version": "0.1.0",
+  "description": "An original snake game for Claude Code. Eat to grow and stay off the walls and your tail. Pauses when Claude finishes; Claude's tool calls drop glowing bonus food.",
+  "author": {
+    "name": "beasaltfish"
+  },
+  "license": "MIT"
+}

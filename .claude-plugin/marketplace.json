@@ -6,9 +6,34 @@
   },
   "plugins": [
     {
-      "name": "reef-net",
-      "source": "./plugins/reef-net",
-      "description": "An original arcade reef-fishing game for Claude Code. Pauses when Claude finishes and drops golden fish while Claude works."
+      "name": "fish-shooter",
+      "source": "./plugins/fish-shooter",
+      "description": "An original arcade fish-shooter game for Claude Code. Aim a net cannon and catch fish. Pauses when Claude finishes; Claude's tool calls drop golden fish."
+    },
+    {
+      "name": "brick-breaker",
+      "source": "./plugins/brick-breaker",
+      "description": "An original arcade brick-breaker game for Claude Code. Bounce the ball and burst every brick. Pauses when Claude finishes; Claude's tool calls drop power-up capsules."
+    },
+    {
+      "name": "snake",
+      "source": "./plugins/snake",
+      "description": "An original snake game for Claude Code. Eat to grow and stay off the walls and your tail. Pauses when Claude finishes; Claude's tool calls drop glowing bonus food."
+    },
+    {
+      "name": "space-shooter",
+      "source": "./plugins/space-shooter",
+      "description": "An original side-scrolling space shooter for Claude Code. Fly through waves and beat a boss every fifth wave. Pauses when Claude finishes; Claude's tool calls drop supply pods."
+    },
+    {
+      "name": "tap-flyer",
+      "source": "./plugins/tap-flyer",
+      "description": "An original tap-to-fly game for Claude Code. Thread your ember through gaps in scrolling pillars. Pauses when Claude finishes; Claude's tool calls drop glowing coins."
+    },
+    {
+      "name": "jump-runner",
+      "source": "./plugins/jump-runner",
+      "description": "An original endless runner for Claude Code. Jump over crates and under drones as the pace climbs. Pauses when Claude finishes; Claude's tool calls drop glowing coins."
     }
   ]
 }

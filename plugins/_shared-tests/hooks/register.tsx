@@ -1,8 +1,14 @@
 import type { Register } from 'claude-code'
 
-import { registerClaudeLink } from './shared/hooks-link'
+import { registerGamePane } from './shared/hooks-pane'
 
-// Test host only: wires the shared link hooks so tsc and the tests cover them.
+// Test host only: wires the shared pane and link hooks around the dummy game so tsc
+// and the tests cover them.
 export const register: Register = on => {
-  registerClaudeLink(on, { title: 'Shared tests', paneId: 'game' })
+  registerGamePane(on, {
+    pane: 'game',
+    title: 'Shared tests',
+    command: 'shared-tests',
+    description: 'Test host for the shared game shell',
+  })
 }

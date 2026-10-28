@@ -1,0 +1,32 @@
+import { atom, read, update } from 'claude-code'
+import type { JsonValue } from 'claude-code'
+
+import { isEnvelope } from './shared/envelope'
+
+// Literal plugin/key atoms, as link-apply.ts: shared/hooks-pane.tsx imports this file.
+const save = atom({ plugin: '_shared-tests', key: 'save' } as const, null as JsonValue | null, { shape: 'save-1' })
+const seed = atom({ plugin: '_shared-tests', key: 'seed' } as const, null as number | null, { shape: 'seed-1' })
+
+export function readSave($: Parameters<typeof read>[0]): Promise<JsonValue | null> {
+  return read($, save)
+}
+
+export function writeSave($: Parameters<typeof update>[0], v: JsonValue): Promise<JsonValue | null> {
+  return update($, save, () => v)
+}
+
+export function readSeed($: Parameters<typeof read>[0]): Promise<number | null> {
+  return read($, seed)
+}
+
+// Dev frame-time readout switch; unset in play.
+const debug = atom({ plugin: '_shared-tests', key: 'debug' } as const, null as boolean | null, { shape: 'debug-1' })
+
+export function readDebug($: Parameters<typeof read>[0]): Promise<boolean | null> {
+  return read($, debug)
+}
+
+// The shell's envelope: { v, g }. Anything else is no save.
+export function parseSave(v: unknown): JsonValue | null {
+  return isEnvelope(v) ? (v as JsonValue) : null
+}

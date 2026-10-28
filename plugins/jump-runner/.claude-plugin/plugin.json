@@ -1,0 +1,9 @@
+{
+  "name": "jump-runner",
+  "version": "0.1.0",
+  "description": "An original endless runner for Claude Code. Jump over crates and under drones as the pace climbs. Pauses when Claude finishes; Claude's tool calls drop glowing coins.",
+  "author": {
+    "name": "beasaltfish"
+  },
+  "license": "MIT"
+}

@@ -4,9 +4,9 @@ Status: RUN 2026-10-28 16:37–16:41 local, Claude Code 2.1.312, author's termin
 
 ## How to run
 
-1. In `/Users/hanlynn/Projects/my/coinslot`: `bun run check` (must pass).
+1. In the repo root: `bun run check` (must pass).
 2. Start a real session with the probe loaded:
-   `claude --plugin-dir /Users/hanlynn/Projects/my/coinslot/plugins/_probe`
+   `claude --plugin-dir plugins/_probe`
 3. Run `/probe`. A pane opens with a header line `tick N (x/s) focused=...` and a live event log.
 4. Do each scenario below, watching the pane (and take notes on timestamps):
    - (a) Click the pane, then press Esc.
@@ -56,3 +56,17 @@ The Bash call in scenario (b) ran without a prompt because the session was in au
 - Golden bonus fish could not be told apart from the yellow small fish, so they were redesigned.
 
 Passed on c46fd20: bonus fish recognisable, done overlay at turn end, click/key resumes, coins survive the dialog.
+
+Renamed 2026-10-28: reef-net is now fish-shooter (command `/coinslot-fish-shooter`); entries above keep the old name as measured.
+
+## Esc and pointer move, live
+
+Measured 2026-10-28 in the author's terminal, inline layout, brick-breaker on the shell.
+
+- Esc never reaches the Client: pressing it mid-run does not pause (the engine takes it to return focus to the chat).
+- Pointer move without a click does reach the Client: the paddle follows the mouse.
+- A dialog remount comes back `PAUSED · PRESS ANY KEY` with the score kept.
+- The `CLAUDE IS DONE` banner shows at a main turn end.
+- Two presses (start, then launch) felt fine.
+
+Consequence: Esc pause is inert; every game pauses on `p` instead (no idle auto-pause).

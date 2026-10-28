@@ -1,0 +1,9 @@
+{
+  "name": "fish-shooter",
+  "version": "0.1.0",
+  "description": "An original arcade fish-shooter game for Claude Code. Aim a net cannon and catch fish. Pauses when Claude finishes; Claude's tool calls drop golden fish.",
+  "author": {
+    "name": "beasaltfish"
+  },
+  "license": "MIT"
+}

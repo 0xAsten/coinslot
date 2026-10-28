@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Everything in Plan 1's Global Constraints still holds (`docs/superpowers/plans/2026-10-28-coinslot-foundation.md`), except the `CLAUDE NEEDS YOU` copy, which is gone.
-- Names, verbatim; the slash command equals the plugin name: `fish-shooter`, `brick-breaker`, `snake`, `space-shooter`, `tap-flyer`, `jump-runner`. Pane titles: `Fish Shooter`, `Brick Breaker`, `Snake`, `Space Shooter`, `Tap Flyer`, `Jump Runner`.
+- Names, verbatim; plugin names are `fish-shooter`, `brick-breaker`, `snake`, `space-shooter`, `tap-flyer`, `jump-runner`; each slash command is the plugin name prefixed `coinslot-` (e.g. `/coinslot-snake`), so Task 9 checks clashes for the prefixed commands. Pane titles: `Fish Shooter`, `Brick Breaker`, `Snake`, `Space Shooter`, `Tap Flyer`, `Jump Runner`.
 - Overlay copy, verbatim: `CLAUDE IS DONE · ESC TO RETURN`, `PRESS ANY KEY TO START`, `PAUSED · PRESS ANY KEY`.
 - Protagonists are original: jump-runner's runner is not a dinosaur; tap-flyer is not a bird flying between green pipes. No trademarked names (Breakout, Tetris, Flappy) anywhere in copy or code identifiers.
 - Sims are pure: no `Date`, no `Math.random`; all randomness comes from the seed inside the state. Game state is plain JSON (no `Map`, `Set`, class instances), because it is saved through `$.state`.
@@ -107,7 +107,7 @@ Game: a paddle at the bottom follows the pointer's x (pointer `move`) and ←/�
 
 - [ ] **Step 1: Failing tests** in `sim.test.ts`: `ball reflects off side and top walls`; `a brick hit removes the brick, adds score, spawns particles`; `particles never exceed MAX_PARTICLES`; `missing the last ball costs a life and parks a new ball on the paddle`; `losing the last life ends the run and a key after 0.5 s starts a new one`; `30 bonuses in one frame leave at most 2 capsules`; `catching a capsule widens the paddle or adds a ball, never beyond 3 balls`; `resize clamps paddle, balls and capsules inside`; `same seed + same inputs → identical state after 300 steps`. In `render.test.ts`: `render returns cols × rows cells at 40×10 and 120×30`. In `pane.test.tsx`: `opens on PRESS ANY KEY TO START, a key launches play, HUD shows score and lives`.
 - [ ] **Step 2:** Run `claude plugin test plugins/brick-breaker`. Expected: FAIL.
-- [ ] **Step 3:** Implement sim, render, game spec, register (via `registerGamePane`), manifest (description says "for Claude Code" and `Open it with /brick-breaker.`). Pick `MAX_PARTICLES` with the frame readout at 120×30; if the shell needs more than glue, change the shell, not the game.
+- [ ] **Step 3:** Implement sim, render, game spec, register (via `registerGamePane`), manifest (description says "for Claude Code" and `Open it with /coinslot-brick-breaker.`). Pick `MAX_PARTICLES` with the frame readout at 120×30; if the shell needs more than glue, change the shell, not the game.
 - [ ] **Step 4:** `bun run check`. Expected: `check: all ok`. Commit `feat: brick-breaker`.
 - [ ] **Step 5: GATE — author live check.** Copy `plugins/brick-breaker` and `plugins/fish-shooter` (minus `.claude-plugin/types`) into this session's dev-mods directory (the plugin-authoring skill prints it). Ask the author to: play both at the inline size; press Esc mid-run in brick-breaker and say whether it paused; move the mouse without clicking and say whether the paddle followed; finish a Claude turn while playing; open and close an AskUserQuestion dialog. Record the answers in `docs/probe-findings.md` (section "Esc and pointer move, live"). Fix what the author reports before Task 5.
 
@@ -127,7 +127,7 @@ Game: a snake on a grid of square-looking cells (2 columns × 1 row per cell), a
 
 **Files:** `plugins/space-shooter/`, same file set.
 
-Game: a ship on the left moves with the arrows and toward the pointer; it fires automatically (no key-up exists, so no hold-to-fire). Waves of enemies cross from the right; every 5th wave is a boss with a health bar. 3 lives, brief invulnerability after a hit. Bonus: a supply pod flies in — weapon level +1 (max 3) or a one-hit shield (pods on screen capped at 2). Policy `{ start: true, escape: true, idleMs: 3000 }`.
+Game: a ship on the left moves with the arrows and toward the pointer; it fires automatically (no key-up exists, so no hold-to-fire). Waves of enemies cross from the right; every 5th wave is a boss with a health bar. 3 lives, brief invulnerability after a hit. Bonus: a supply pod flies in — weapon level +1 (max 3) or a one-hit shield (pods on screen capped at 2). Policy `{ start: true, escape: true }`; `p` pauses (shell, all games — author decision 2026-10-28 replaced idle pause).
 
 - [ ] **Step 1: Failing tests**: `auto-fire spawns shots at the weapon's rate`; `a shot destroys an enemy and scores`; `a hit costs a life and grants invulnerability for its window`; `the 5th wave is a boss and the 6th wave follows its defeat`; `weapon level never exceeds 3`; `30 bonuses → at most 2 pods, none spawned overlapping an enemy`; `pointer move steers the ship toward the pointer`; `resize clamps the ship and drops off-field entities`; determinism; render size; pane test.
 - [ ] **Step 2:** Run tests. Expected: FAIL.
@@ -139,7 +139,7 @@ Game: a ship on the left moves with the arrows and toward the pointer; it fires 
 
 **Files:** `plugins/tap-flyer/`, same file set.
 
-Game: an original flyer (not a bird with green pipes) falls under gravity; any key or click gives one upward impulse. Obstacle columns with gaps scroll left; passing a gap scores 1. Touching an obstacle or the floor ends the run. Bonus: a coin in the middle of an upcoming gap, worth 3 (cap 2 on screen; never inside an obstacle). Policy `{ start: true, escape: true, idleMs: 3000 }`.
+Game: an original flyer (not a bird with green pipes) falls under gravity; any key or click gives one upward impulse. Obstacle columns with gaps scroll left; passing a gap scores 1. Touching an obstacle or the floor ends the run. Bonus: a coin in the middle of an upcoming gap, worth 3 (cap 2 on screen; never inside an obstacle). Policy `{ start: true, escape: true }`; `p` pauses (shell, all games — author decision 2026-10-28 replaced idle pause).
 
 - [ ] **Step 1: Failing tests**: `a tap sets upward velocity, gravity pulls down`; `passing a gap scores once`; `obstacle and floor contact end the run`; `a key in the first 0.5 s after the end does not restart`; `30 bonuses → at most 2 coins, each inside a gap`; `gap size never shrinks below the minimum`; `resize keeps the flyer and gaps inside`; determinism; render size; pane test.
 - [ ] **Step 2:** Run tests. Expected: FAIL.
@@ -151,7 +151,7 @@ Game: an original flyer (not a bird with green pipes) falls under gravity; any k
 
 **Files:** `plugins/jump-runner/`, same file set.
 
-Game: an original runner (not a dinosaur) runs right on the ground; space, ↑ or a click jumps (fixed height; one extra jump in the air). Ground obstacles and low flyers scroll in; speed ramps up over time; distance is the score. Bonus: a coin on the running path, worth 10 (cap 2; never on or touching an obstacle). Policy `{ start: true, escape: true, idleMs: 3000 }`.
+Game: an original runner (not a dinosaur) runs right on the ground; space, ↑ or a click jumps (fixed height; one extra jump in the air). Ground obstacles and low flyers scroll in; speed ramps up over time; distance is the score. Bonus: a coin on the running path, worth 10 (cap 2; never on or touching an obstacle). Policy `{ start: true, escape: true }`; `p` pauses (shell, all games — author decision 2026-10-28 replaced idle pause).
 
 - [ ] **Step 1: Failing tests**: `a jump has a fixed height and the air jump works once`; `obstacle contact ends the run`; `speed ramps but never past MAX_SPEED`; `consecutive obstacles always leave a clearable gap at the current speed`; `a key in the first 0.5 s after the end does not restart`; `30 bonuses → at most 2 coins, none touching an obstacle`; `resize keeps the runner on the ground`; determinism; render size; pane test.
 - [ ] **Step 2:** Run tests. Expected: FAIL.

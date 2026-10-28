@@ -1,0 +1,9 @@
+{
+  "name": "space-shooter",
+  "version": "0.1.0",
+  "description": "An original side-scrolling space shooter for Claude Code. Fly through waves and beat a boss every fifth wave. Pauses when Claude finishes; Claude's tool calls drop supply pods.",
+  "author": {
+    "name": "beasaltfish"
+  },
+  "license": "MIT"
+}
