@@ -61,8 +61,8 @@ test('a pause stops the tick and playing resumes it', async ($, on) => {
 test('opening the pane clears a stale done pause', async ($, on) => {
   const h = wire(on, { pause: 'done', bonusSeq: 0 })
   on('ui.open', () => ({ value: { isPlaced: true } }))
-  on('command.register', () => ({ value: { command: 'fish-shooter' } }))
-  await $.command.run({ command: 'fish-shooter', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })
+  on('command.register', () => ({ value: { command: 'coinslot-fish-shooter' } }))
+  await $.command.run({ command: 'coinslot-fish-shooter', args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 100 } })
   expect(h.link().pause).toBe(null)
 })
 

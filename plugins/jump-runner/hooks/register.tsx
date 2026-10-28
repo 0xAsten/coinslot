@@ -6,7 +6,7 @@ export const register: Register = on => {
   registerGamePane(on, {
     pane: 'jump-runner',
     title: 'Jump Runner',
-    command: 'jump-runner',
+    command: 'coinslot-jump-runner',
     description: 'Open the Jump Runner arcade game in a pane',
     opened: 'Jump Runner opened. Press space, up or click to jump; p pauses; esc returns to chat.',
   })

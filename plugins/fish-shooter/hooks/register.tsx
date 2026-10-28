@@ -6,7 +6,7 @@ export const register: Register = on => {
   registerGamePane(on, {
     pane: 'fish-shooter',
     title: 'Fish Shooter',
-    command: 'fish-shooter',
+    command: 'coinslot-fish-shooter',
     description: 'Open the Fish Shooter arcade game in a pane',
     opened: 'Fish Shooter opened. Click the pane to aim; p pauses; esc returns to chat.',
   })

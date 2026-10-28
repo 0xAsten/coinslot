@@ -16,16 +16,16 @@ Plan 1 交付了共享联动模块和 reef-net。Plan 2 交付剩下五个游戏
 
 **原则：用户一看名字就知道是什么游戏。** 一眼可认比整套主题统一更重要，所以不用统一主题（海洋主题已被否决），名字直接说出玩法类型。唯一要绕开的是商标名（Breakout、Tetris、Flappy Bird 等），只用通用类型词。
 
-| 类型 | 插件名 / 斜杠命令 |
-| --- | --- |
-| 捕鱼射击（原 reef-net） | `fish-shooter` |
-| 打砖块 | `brick-breaker` |
-| 贪吃蛇 | `snake` |
-| 横版飞机射击 | `space-shooter` |
-| 上下扑腾、穿过障碍 | `tap-flyer` |
-| 横向奔跑、跳跃躲障碍 | `jump-runner` |
+| 类型 | 插件名 | 斜杠命令 |
+| --- | --- | --- |
+| 捕鱼射击（原 reef-net） | `fish-shooter` | `/coinslot-fish-shooter` |
+| 打砖块 | `brick-breaker` | `/coinslot-brick-breaker` |
+| 贪吃蛇 | `snake` | `/coinslot-snake` |
+| 横版飞机射击 | `space-shooter` | `/coinslot-space-shooter` |
+| 上下扑腾、穿过障碍 | `tap-flyer` | `/coinslot-tap-flyer` |
+| 横向奔跑、跳跃躲障碍 | `jump-runner` | `/coinslot-jump-runner` |
 
-- 斜杠命令与插件名相同，例如 `/brick-breaker`。fish-shooter 的命令也随之从 `/reef` 改成 `/fish-shooter`。
+- 斜杠命令统一加 `coinslot-` 前缀（例如 `/coinslot-snake`），输入 `/coinslot` 即可列出全部游戏；插件名与安装命令不变；前缀也降低了与其他插件撞名的可能。fish-shooter 的命令也随之从 `/reef` 改成 `/coinslot-fish-shooter`。
 - **发布前要查一遍撞名**（插件市场、npm、GitHub 上的同名 Claude Code 插件）。撞了就提替代名给作者拍板，不要自己改。
   - 撞名检查**不阻塞开发**（构建者的决定）：插件名只在本 marketplace 内唯一，安装命令带 `--marketplace beasaltfish/coinslot`，真正可能冲突的只有斜杠命令。所以先用这些名字开发，撞名检查放在 Plan 2 最后一步，需要改名时一次性改。
 - 主角形象仍然原创，按各自游戏最顺手的来画，不限主题。跑酷类的主角不能是恐龙（与 claudedino 区分），扑腾类不能是小鸟加绿水管。

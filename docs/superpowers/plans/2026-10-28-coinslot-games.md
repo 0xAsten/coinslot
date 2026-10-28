@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Everything in Plan 1's Global Constraints still holds (`docs/superpowers/plans/2026-10-28-coinslot-foundation.md`), except the `CLAUDE NEEDS YOU` copy, which is gone.
-- Names, verbatim; the slash command equals the plugin name: `fish-shooter`, `brick-breaker`, `snake`, `space-shooter`, `tap-flyer`, `jump-runner`. Pane titles: `Fish Shooter`, `Brick Breaker`, `Snake`, `Space Shooter`, `Tap Flyer`, `Jump Runner`.
+- Names, verbatim; plugin names are `fish-shooter`, `brick-breaker`, `snake`, `space-shooter`, `tap-flyer`, `jump-runner`; each slash command is the plugin name prefixed `coinslot-` (e.g. `/coinslot-snake`), so Task 9 checks clashes for the prefixed commands. Pane titles: `Fish Shooter`, `Brick Breaker`, `Snake`, `Space Shooter`, `Tap Flyer`, `Jump Runner`.
 - Overlay copy, verbatim: `CLAUDE IS DONE · ESC TO RETURN`, `PRESS ANY KEY TO START`, `PAUSED · PRESS ANY KEY`.
 - Protagonists are original: jump-runner's runner is not a dinosaur; tap-flyer is not a bird flying between green pipes. No trademarked names (Breakout, Tetris, Flappy) anywhere in copy or code identifiers.
 - Sims are pure: no `Date`, no `Math.random`; all randomness comes from the seed inside the state. Game state is plain JSON (no `Map`, `Set`, class instances), because it is saved through `$.state`.
@@ -107,7 +107,7 @@ Game: a paddle at the bottom follows the pointer's x (pointer `move`) and ←/�
 
 - [ ] **Step 1: Failing tests** in `sim.test.ts`: `ball reflects off side and top walls`; `a brick hit removes the brick, adds score, spawns particles`; `particles never exceed MAX_PARTICLES`; `missing the last ball costs a life and parks a new ball on the paddle`; `losing the last life ends the run and a key after 0.5 s starts a new one`; `30 bonuses in one frame leave at most 2 capsules`; `catching a capsule widens the paddle or adds a ball, never beyond 3 balls`; `resize clamps paddle, balls and capsules inside`; `same seed + same inputs → identical state after 300 steps`. In `render.test.ts`: `render returns cols × rows cells at 40×10 and 120×30`. In `pane.test.tsx`: `opens on PRESS ANY KEY TO START, a key launches play, HUD shows score and lives`.
 - [ ] **Step 2:** Run `claude plugin test plugins/brick-breaker`. Expected: FAIL.
-- [ ] **Step 3:** Implement sim, render, game spec, register (via `registerGamePane`), manifest (description says "for Claude Code" and `Open it with /brick-breaker.`). Pick `MAX_PARTICLES` with the frame readout at 120×30; if the shell needs more than glue, change the shell, not the game.
+- [ ] **Step 3:** Implement sim, render, game spec, register (via `registerGamePane`), manifest (description says "for Claude Code" and `Open it with /coinslot-brick-breaker.`). Pick `MAX_PARTICLES` with the frame readout at 120×30; if the shell needs more than glue, change the shell, not the game.
 - [ ] **Step 4:** `bun run check`. Expected: `check: all ok`. Commit `feat: brick-breaker`.
 - [ ] **Step 5: GATE — author live check.** Copy `plugins/brick-breaker` and `plugins/fish-shooter` (minus `.claude-plugin/types`) into this session's dev-mods directory (the plugin-authoring skill prints it). Ask the author to: play both at the inline size; press Esc mid-run in brick-breaker and say whether it paused; move the mouse without clicking and say whether the paddle followed; finish a Claude turn while playing; open and close an AskUserQuestion dialog. Record the answers in `docs/probe-findings.md` (section "Esc and pointer move, live"). Fix what the author reports before Task 5.
 

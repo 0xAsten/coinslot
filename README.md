@@ -18,7 +18,7 @@ From a shell the same install is:
 claude plugin install fish-shooter --marketplace beasaltfish/coinslot
 ```
 
-Open the game with `/fish-shooter`.
+Open the game with `/coinslot-fish-shooter`.
 
 ### Brick Breaker
 
@@ -34,7 +34,7 @@ From a shell the same install is:
 claude plugin install brick-breaker --marketplace beasaltfish/coinslot
 ```
 
-Open the game with `/brick-breaker`.
+Open the game with `/coinslot-brick-breaker`.
 
 ### Snake
 
@@ -50,7 +50,7 @@ From a shell the same install is:
 claude plugin install snake --marketplace beasaltfish/coinslot
 ```
 
-Open the game with `/snake`.
+Open the game with `/coinslot-snake`.
 
 ### Space Shooter
 
@@ -66,7 +66,7 @@ From a shell the same install is:
 claude plugin install space-shooter --marketplace beasaltfish/coinslot
 ```
 
-Open the game with `/space-shooter`.
+Open the game with `/coinslot-space-shooter`.
 
 ### Tap Flyer
 
@@ -82,7 +82,7 @@ From a shell the same install is:
 claude plugin install tap-flyer --marketplace beasaltfish/coinslot
 ```
 
-Open the game with `/tap-flyer`.
+Open the game with `/coinslot-tap-flyer`.
 
 ### Jump Runner
 
@@ -98,7 +98,7 @@ From a shell the same install is:
 claude plugin install jump-runner --marketplace beasaltfish/coinslot
 ```
 
-Open the game with `/jump-runner`.
+Open the game with `/coinslot-jump-runner`.
 
 System notifications need a notification channel configured in Claude Code (`preferredNotifChannel`).
 

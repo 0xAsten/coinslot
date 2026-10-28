@@ -1,7 +1,7 @@
 {
   "name": "tap-flyer",
   "version": "0.1.0",
-  "description": "An original tap-to-fly game in a pane for Claude Code: any key or click gives your ember one lift against gravity, so thread the gaps in the scrolling pillars. Pauses when Claude finishes and drops glowing coins in the gaps while Claude works. Open it with /tap-flyer.",
+  "description": "An original tap-to-fly game in a pane for Claude Code: any key or click gives your ember one lift against gravity, so thread the gaps in the scrolling pillars. Pauses when Claude finishes and drops glowing coins in the gaps while Claude works. Open it with /coinslot-tap-flyer.",
   "author": {
     "name": "beasaltfish"
   },
