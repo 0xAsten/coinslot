@@ -36,18 +36,22 @@ function wire(on: (event: any, fn: (...a: any[]) => any) => void, link?: { pause
 
 const idle = { pause: null, bonusSeq: 0 } as const
 
+// the debug readout in the HUD counts ticks; the game itself must not move
+const game = async (ui: { drawn: (s: { in: string }) => Promise<unknown> }) =>
+  JSON.stringify(await ui.drawn({ in: 'reef' })).replace(/ t:\d{5}/g, ' t:')
+
 test('unfocused props stop the tick', async ($, on) => {
   wire(on, idle)
   const ui = await $.ui.mount({ ...PANE, props: { ...PANE.props, isFocused: false } })
   await ui.resize({ columns: 70, rows: 20, in: 'reef' })
   await ui.advance(100)
-  const a = JSON.stringify(await ui.drawn({ in: 'reef' }))
+  const a = await game(ui)
   await ui.advance(1000)
-  expect(JSON.stringify(await ui.drawn({ in: 'reef' }))).toBe(a)
+  expect(await game(ui)).toBe(a)
 
   await ui.redraw({ ...PANE.props, isFocused: true })
   await ui.advance(1000)
-  expect(JSON.stringify(await ui.drawn({ in: 'reef' }))).not.toBe(a)
+  expect(await game(ui)).not.toBe(a)
   await ui.unmount()
 })
 

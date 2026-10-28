@@ -47,7 +47,16 @@ export function drawSizeNotice(cols: number, rows: number): Cells {
     bg: Array(n).fill(BANNER_BG),
   }
   if (out.cols > 0 && out.rows > 0) {
-    writeCentered(out, Math.floor(out.rows / 2), 'Make the terminal wider or taller (60×10).', BANNER_FG, BANNER_BG)
+    const copy = 'Make the terminal wider or taller (40×10)'
+    const now = `now ${cols}×${rows}`
+    const mid = Math.floor(out.rows / 2)
+    if (`${copy} · ${now}`.length <= out.cols) {
+      writeCentered(out, mid, `${copy} · ${now}`, BANNER_FG, BANNER_BG)
+    } else {
+      // too narrow for one line: the size goes on the row below
+      writeCentered(out, mid, copy, BANNER_FG, BANNER_BG)
+      if (mid + 1 < out.rows) writeCentered(out, mid + 1, now, BANNER_FG, BANNER_BG)
+    }
   }
   return out
 }

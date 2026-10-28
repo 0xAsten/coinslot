@@ -213,7 +213,7 @@ function drawCannon(p: Px, g: Game) {
   disc(p, c.x, c.y + 0.5, 2.2, 0x7a7f90)
 }
 
-export function renderCells(g: Game, hintOn = true): Cells {
+export function renderCells(g: Game, hintOn = true, debug = ''): Cells {
   const cols = g.w
   const rows = Math.floor(g.h / 2)
   const px: Px = { buf: new Uint32Array(background(g.w, g.h)), w: g.w, h: g.h }
@@ -287,6 +287,13 @@ export function renderCells(g: Game, hintOn = true): Cells {
     ch[x] = hud[x]!
     fg[x] = x < 22 ? 0xffe45a : 0xdff7f4
     bg[x] = 0x083a5c
+  }
+  if (debug) {
+    const start = Math.max(0, cols - debug.length)
+    for (let k = 0; k < debug.length && start + k < cols; k += 1) {
+      ch[start + k] = debug[k]!
+      fg[start + k] = 0xff9ad0
+    }
   }
   if (g.coins < g.bet) {
     const msg = ' out of coins - press r to refill '

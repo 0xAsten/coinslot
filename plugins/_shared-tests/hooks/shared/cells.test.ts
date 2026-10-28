@@ -43,5 +43,12 @@ test('overlay on a 20-col grid truncates without throwing', () => {
 test('drawSizeNotice fills the requested grid', () => {
   const out = drawSizeNotice(60, 6)
   expect(out.ch.length).toBe(360)
-  expect(out.ch.join('')).toContain('Make the terminal wider or taller (60×10).')
+  expect(out.ch.join('')).toContain('Make the terminal wider or taller (40×10) · now 60×6')
+})
+
+test('drawSizeNotice puts the size on its own row when one line will not fit', () => {
+  const out = drawSizeNotice(41, 8)
+  const text = out.ch.join('')
+  expect(text).toContain('Make the terminal wider or taller (40×10)')
+  expect(text).toContain('now 41×8')
 })
