@@ -50,7 +50,7 @@ export type GameSpec<G, I> = {
   load?(fresh: G, saved: JsonValue): G | null
 }
 
-export type ShellProps = { pause: Pause; bonusSeq: number; save?: JsonValue; seed?: number }
+export type ShellProps = { pause: Pause; bonusSeq: number; save?: JsonValue; seed?: number; debug?: boolean }
 
 type Hold = null | 'start' | 'paused'
 
@@ -69,8 +69,33 @@ type Ctl<G, I> = {
   lastSent?: string
   wasHeld: boolean
   n: number
+  // dev readout: ms spent in the last step, and a 1 s window of per-frame totals
+  stepMs: number
+  frames: { at: number; ms: number }[]
 }
 export type ShellState = { ctl: Ctl<any, any>; n: number }
+
+// Wall-clock reads live only in the readout path, never in a sim.
+const now = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+
+const READOUT_WINDOW_MS = 1000
+
+// Paints "NNms" (the 1 s max frame cost) at the top-right of the frame.
+function drawReadout(c: Cells, ms: number): Cells {
+  const text = `${Math.round(ms)}ms`
+  const ch = [...c.ch]
+  const fg = [...c.fg]
+  const bg = [...c.bg]
+  const start = c.cols - text.length
+  if (start < 0 || c.rows < 1) return c
+  for (let i = 0; i < text.length; i++) {
+    ch[start + i] = text[i] as string
+    fg[start + i] = 0xffff00
+    bg[start + i] = 0x000000
+  }
+
+  return { ...c, ch, fg, bg }
+}
 
 function coarse(c: Cells): Cells {
   return { ...c, fg: c.fg.map(v => v & COLOR_MASK), bg: c.bg.map(v => v & COLOR_MASK) }
@@ -101,6 +126,8 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
       ticksSinceSave: 0,
       wasHeld: false,
       n: 0,
+      stepMs: 0,
+      frames: [],
     }
     if (restore !== undefined) ctl.restore = restore
     const mine = ctl
@@ -174,7 +201,9 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
       // bonuses wait out a hold and arrive on resume, still subject to the game's own cap
       for (; mine.seenBonus < p.bonusSeq; mine.seenBonus += 1) g = spec.bonus(g)
       mine.seenBonus = p.bonusSeq
+      const t0 = mine.props.debug ? now() : 0
       mine.game = spec.step(g, dt, mine.input)
+      mine.stepMs = mine.props.debug ? now() - t0 : 0
       mine.input = spec.noInput()
 
       // A remount (dialog open/close) loses at most ~1 s of progress, by design:
@@ -230,9 +259,11 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
   const cols = surface.columns
   const rows = surface.rows
   let cells: Cells | undefined
+  let renderStart = 0
   if (cols > 0 && rows > 0 && (cols < MIN_COLS || rows < MIN_ROWS)) {
     cells = drawSizeNotice(cols, rows)
   } else if (ctl.game !== undefined) {
+    renderStart = props.debug ? now() : 0
     cells = spec.render(ctl.game)
     // a finished turn outranks the local hold
     const banner: Banner | null = props.pause !== null ? props.pause : ctl.hold
@@ -240,7 +271,18 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
   }
   if (!cells) return <Text dimColor>{spec.hint ?? `${spec.title}: click here to focus.`}</Text>
 
-  const lines = toRuns(coarse(cells)).map(row => (
+  let runs: ReturnType<typeof toRuns>
+  if (props.debug) {
+    const at = now()
+    ctl.frames = ctl.frames.filter(f => at - f.at < READOUT_WINDOW_MS)
+    const max = ctl.frames.reduce((m, f) => Math.max(m, f.ms), 0)
+    runs = toRuns(coarse(drawReadout(cells, max)))
+    // step + render + toRuns of this frame (the readout shows it from the next frame on)
+    ctl.frames.push({ at, ms: ctl.stepMs + (now() - renderStart) })
+  } else {
+    runs = toRuns(coarse(cells))
+  }
+  const lines = runs.map(row => (
     <Box flexDirection="row">
       {row.map(r => (
         <Text color={hex(r.fg)} backgroundColor={hex(r.bg)}>

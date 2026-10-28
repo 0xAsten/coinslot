@@ -22,8 +22,9 @@ const PANE = {
 type Store = Record<string, { value: unknown; version: number }>
 type Link = { pause: null | 'done'; bonusSeq: number }
 
-function wire(on: (event: any, fn: (...a: any[]) => any) => void, opts: { save?: unknown; link?: Link } = {}) {
+function wire(on: (event: any, fn: (...a: any[]) => any) => void, opts: { save?: unknown; link?: Link; debug?: boolean } = {}) {
   const store: Store = { seed: { value: { shape: 'seed-1', value: 7 }, version: 1 } }
+  if (opts.debug) store.debug = { value: { shape: 'debug-1', value: true }, version: 1 }
   if (opts.save !== undefined) store.save = { value: { shape: 'save-1', value: opts.save }, version: 1 }
   if (opts.link) store.link = { value: { shape: LINK_SHAPE, value: opts.link }, version: 1 }
   const saves: unknown[] = []
@@ -236,5 +237,23 @@ test('a hold saves once on entering it and spawns no bonus until resume', async 
   await press(ui, 'x')
   await ui.advance(200)
   expect(await has(ui, /bonus 2\b/)).toBe(true)
+  await ui.unmount()
+})
+
+test('the frame readout is absent without debug', async ($, on) => {
+  wire(on)
+  const ui = await open($)
+  await press(ui, 'x')
+  await ui.advance(300)
+  expect(await has(ui, /\d+ms/)).toBe(false)
+  await ui.unmount()
+})
+
+test('the frame readout appears in debug', async ($, on) => {
+  wire(on, { debug: true })
+  const ui = await open($)
+  await press(ui, 'x')
+  await ui.advance(300)
+  expect(await has(ui, /\d+ms/)).toBe(true)
   await ui.unmount()
 })

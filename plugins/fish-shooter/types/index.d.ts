@@ -5,6 +5,7 @@ declare module 'claude-code' {
     'fish-shooter': {
       link: Shaped<{ pause: null | 'done'; bonusSeq: number }>
       seed: Shaped<number | null>
+      debug: Shaped<boolean | null>
       save: Shaped<JsonValue | null>
     }
   }

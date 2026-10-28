@@ -19,6 +19,13 @@ export function readSeed($: Parameters<typeof read>[0]): Promise<number | null> 
   return read($, seed)
 }
 
+// Dev frame-time readout switch; unset in play.
+const debug = atom({ plugin: '_shared-tests', key: 'debug' } as const, null as boolean | null, { shape: 'debug-1' })
+
+export function readDebug($: Parameters<typeof read>[0]): Promise<boolean | null> {
+  return read($, debug)
+}
+
 // The shell's envelope: { v, g }. Anything else is no save.
 export function parseSave(v: unknown): JsonValue | null {
   return isEnvelope(v) ? (v as JsonValue) : null

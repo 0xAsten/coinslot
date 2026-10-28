@@ -22,6 +22,13 @@ export function readSeed($: Parameters<typeof read>[0]): Promise<number | null> 
   return read($, seed)
 }
 
+// Dev frame-time readout switch; unset in play.
+const debug = atom({ plugin: 'fish-shooter', key: 'debug' } as const, null as boolean | null, { shape: 'debug-1' })
+
+export function readDebug($: Parameters<typeof read>[0]): Promise<boolean | null> {
+  return read($, debug)
+}
+
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 // The shell's envelope { v, g } around the purse; anything else is no save.

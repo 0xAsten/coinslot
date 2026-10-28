@@ -5,6 +5,7 @@ declare module 'claude-code' {
     '_shared-tests': {
       link: Shaped<{ pause: null | 'done'; bonusSeq: number }>
       seed: Shaped<number | null>
+      debug: Shaped<boolean | null>
       save: Shaped<JsonValue | null>
     }
   }

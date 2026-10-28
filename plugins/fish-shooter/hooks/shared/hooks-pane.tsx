@@ -3,7 +3,7 @@ import type { On } from 'claude-code'
 // Each plugin provides these two next to hooks/shared/: atoms need literal plugin/key
 // in the plugin's own files, and the engine's scan refuses $ passed as a parameter.
 import { applyLink, readLink } from '../link-apply'
-import { parseSave, readSave, readSeed, writeSave } from '../save-store'
+import { parseSave, readDebug, readSave, readSeed, writeSave } from '../save-store'
 
 import { registerClaudeLink } from './hooks-link'
 import { onResume } from './link'
@@ -47,6 +47,7 @@ export function registerGamePane(on: On, opts: PaneOpts): void {
     const link = await readLink($)
     const saved = await readSave($)
     const seed = await readSeed($)
+    const debug = await readDebug($)
     // inline panes fit their tree, so a percentage height collapses to the placeholder
     const width = Math.max(20, e.props.bodyColumns)
     const height = Math.max(8, Math.min(e.props.scroll.bodyRows, 26))
@@ -63,6 +64,7 @@ export function registerGamePane(on: On, opts: PaneOpts): void {
             bonusSeq: link.bonusSeq,
             ...(saved ? { save: saved } : {}),
             ...(seed !== null ? { seed } : {}),
+            ...(debug === true ? { debug } : {}),
           }}
         />
       </Box>
