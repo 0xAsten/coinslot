@@ -178,7 +178,7 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
     cells = renderCells(ctl.game)
     if (props.pause !== null) cells = drawOverlay(cells, props.pause)
   }
-  if (!cells) return <Text dimColor>Reef Net: click here to focus, then fire.</Text>
+  if (!cells) return <Text dimColor>Fish Shooter: click here to focus, then fire.</Text>
 
   const lines = toRuns(coarse(cells)).map(row => (
     <Box flexDirection="row">

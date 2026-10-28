@@ -5,7 +5,7 @@ Original terminal mini-games, each a Claude Code mod that runs in a pane beside 
 ## Install
 
 ```
-/plugin install reef-net --marketplace beasaltfish/coinslot
+/plugin install fish-shooter --marketplace beasaltfish/coinslot
 ```
 
 The first time, Claude Code asks `Add marketplace?` for `github:beasaltfish/coinslot`: answer `y`, then pick a scope (user scope is listed first). The mod is active in that session right away.
@@ -13,10 +13,10 @@ The first time, Claude Code asks `Add marketplace?` for `github:beasaltfish/coin
 From a shell the same install is:
 
 ```
-claude plugin install reef-net --marketplace beasaltfish/coinslot
+claude plugin install fish-shooter --marketplace beasaltfish/coinslot
 ```
 
-Open the game with `/reef`.
+Open the game with `/fish-shooter`.
 
 System notifications need a notification channel configured in Claude Code (`preferredNotifChannel`).
 

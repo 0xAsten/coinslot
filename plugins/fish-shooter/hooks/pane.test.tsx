@@ -1,11 +1,11 @@
 import { expect, test } from 'claude-code/testing'
 
 const PANE = {
-  plugin: 'reef-net',
+  plugin: 'fish-shooter',
   component: 'Pane',
-  requestId: 'reef-net',
+  requestId: 'fish-shooter',
   props: {
-    title: 'Reef Net',
+    title: 'Fish Shooter',
     isFocused: true,
     bodyColumns: 60,
     placement: 'dock',
@@ -28,18 +28,18 @@ test('the game draws a HUD, spends a coin on a click and takes a bet key (termin
   })
   {
     const ui = await $.ui.mount({ ...PANE, surface: 'terminal' })
-    await ui.resize({ columns: 60, rows: 20, in: 'reef' })
+    await ui.resize({ columns: 60, rows: 20, in: 'game' })
     await ui.advance(100)
 
-    const hud = await ui.find({ type: 'Text', text: /bet x1/, in: 'reef' })
+    const hud = await ui.find({ type: 'Text', text: /bet x1/, in: 'game' })
     expect(hud).toBeDefined()
 
-    await ui.pointer({ type: 'down', x: 30, y: 8, button: 'left', in: 'reef' })
+    await ui.pointer({ type: 'down', x: 30, y: 8, button: 'left', in: 'game' })
     await ui.advance(100)
-    expect(await ui.find({ type: 'Text', text: /¢ 199/, in: 'reef' })).toBeDefined()
-    await ui.key({ key: 'up', in: 'reef' })
+    expect(await ui.find({ type: 'Text', text: /¢ 199/, in: 'game' })).toBeDefined()
+    await ui.key({ key: 'up', in: 'game' })
     await ui.advance(100)
-    expect(await ui.find({ type: 'Text', text: /bet x2/, in: 'reef' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /bet x2/, in: 'game' })).toBeDefined()
     await ui.unmount()
   }
 })

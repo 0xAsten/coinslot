@@ -1,4 +1,4 @@
-// Pure game logic for reef-net. No clock, no I/O: `step` is deterministic
+// Pure game logic for fish-shooter. No clock, no I/O: `step` is deterministic
 // given the state (the RNG seed lives inside it) and the input.
 
 export type Kind = 'fish' | 'turtle' | 'manta' | 'whale'

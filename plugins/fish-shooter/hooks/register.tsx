@@ -5,8 +5,8 @@ import { readSave, readSeed, writeSave } from './save-store'
 import { registerClaudeLink } from './shared/hooks-link'
 import { onResume } from './shared/link'
 
-const PANE = 'reef-net'
-const TITLE = 'Reef Net'
+const PANE = 'fish-shooter'
+const TITLE = 'Fish Shooter'
 
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
@@ -15,19 +15,19 @@ export const register: Register = on => {
 
   on('session.start', async ($, e, next) => {
     await $.command.register({
-      name: 'reef',
-      description: 'Open the Reef Net arcade game in a pane',
+      name: 'fish-shooter',
+      description: 'Open the Fish Shooter arcade game in a pane',
     })
 
     return next(e)
   })
 
-  on('command.run', { command: 'reef' }, async $ => {
+  on('command.run', { command: 'fish-shooter' }, async $ => {
     // the person just chose to play: a pause left from the last turn is stale
     await applyLink($, onResume)
     await $.ui.open({ id: PANE, title: TITLE, focus: true, rows: 28 })
 
-    return { text: 'Reef Net opened. Click the pane to aim; esc returns to chat.' }
+    return { text: 'Fish Shooter opened. Click the pane to aim; esc returns to chat.' }
   })
 
   on('ui.message', { data: { type: 'save' } }, async ($, e, next) => {
@@ -59,7 +59,7 @@ export const register: Register = on => {
     return (
       <Box flexDirection="column" flexGrow={1}>
         <Client
-          key="reef"
+          key="game"
           module="./game.tsx"
           width={width}
           height={height}

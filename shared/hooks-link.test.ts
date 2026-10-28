@@ -16,9 +16,9 @@ function wire(on: (event: any, fn: (...a: any[]) => any) => void, open: boolean)
     return { value: { isSet: true, version: stored.version } }
   })
   on('ui.panes', () => ({
-    // the host registers paneId 'game'; reef-net's bundled copy runs it as 'reef-net'
+    // the host registers paneId 'game'; fish-shooter's bundled copy runs it as 'fish-shooter'
     value: open
-      ? ['game', 'reef-net'].map(id => ({ id, title: id, isShown: true, isFocused: false, isPlaced: true }))
+      ? ['game', 'fish-shooter'].map(id => ({ id, title: id, isShown: true, isFocused: false, isPlaced: true }))
       : [],
   }))
   on('ui.notify', (_: unknown, e: { text: string }) => {

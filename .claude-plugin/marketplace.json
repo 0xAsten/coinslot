@@ -6,9 +6,9 @@
   },
   "plugins": [
     {
-      "name": "reef-net",
-      "source": "./plugins/reef-net",
-      "description": "An original arcade reef-fishing game for Claude Code. Pauses when Claude finishes and drops golden fish while Claude works."
+      "name": "fish-shooter",
+      "source": "./plugins/fish-shooter",
+      "description": "An original arcade fish-shooter game for Claude Code. Pauses when Claude finishes and drops golden fish while Claude works."
     }
   ]
 }
