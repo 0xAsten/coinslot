@@ -1,0 +1,9 @@
+{
+  "name": "snake",
+  "version": "0.1.0",
+  "description": "An original snake game in a pane for Claude Code: steer with the arrow keys or WASD, eat to grow, stay off the walls and your own tail. Pauses when Claude finishes and drops glowing bonus food while Claude works. Open it with /snake.",
+  "author": {
+    "name": "beasaltfish"
+  },
+  "license": "MIT"
+}
