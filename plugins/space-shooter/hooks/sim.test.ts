@@ -150,19 +150,45 @@ test('30 bonuses → at most 2 pods, none spawned overlapping an enemy', () => {
   g.toSpawn = 0
   g.gapT = 0
   g.enemies = []
-  for (let i = 0; i < 6; i += 1) g.enemies.push(enemy('drone', 60 + i * 6, 8 + i * 7))
+  // a column of enemies right where pods enter, with 3-px gaps between them
+  for (let y = 6; y <= 46; y += 6) g.enemies.push(enemy('drone', 97, y))
+  let spawned = 0
   for (let i = 0; i < 30; i += 1) {
     const before = g.pods.length
     g = spawnBonus(g)
     expect(g.pods.length).toBeLessThanOrEqual(MAX_PODS)
     for (const p of g.pods.slice(before)) {
+      spawned += 1
       const b = podBox(p)
       for (const e of g.enemies) expect(overlap(b.x, b.y, b.w, b.h, e.x, e.y, e.w, e.h)).toBe(false)
     }
     // a pod is picked up or leaves now and then, so the cap is exercised both ways
-    if (i % 7 === 6) g.pods = []
+    if (i % 3 === 2) g.pods = []
   }
   expect(g.pods.length).toBeLessThanOrEqual(MAX_PODS)
+  // the rule rejects some spots but not all of them
+  expect(spawned).toBeGreaterThan(3)
+})
+
+test('the pod a boss drops never lands on an enemy', () => {
+  const kill = (blocker: boolean): Game => {
+    let g = quiet()
+    g.wave = 5
+    g.fireT = 99
+    const boss = enemy('boss', 80, 25, 1)
+    boss.w = 12
+    boss.h = 8
+    g.enemies = [boss]
+    // the pod drops 8 px left of the boss, at its height
+    if (blocker) g.enemies.push(enemy('drone', 72, 25))
+    g.shots = [{ x: 80, y: 25, vx: 0, vy: 0 }]
+
+    return step(g, DT)
+  }
+  expect(kill(false).pods.length).toBe(1)
+  const blocked = kill(true)
+  expect(blocked.enemies.some(e => e.kind === 'boss')).toBe(false)
+  expect(blocked.pods.length).toBe(0)
 })
 
 test('pointer steers the ship toward the pointer without teleporting', () => {
@@ -196,6 +222,21 @@ test('resize clamps the ship and drops off-field entities', () => {
   expect(r.shots.length).toBe(1)
   expect(r.pods.length).toBe(0)
   expect(r.bullets.length).toBe(0)
+})
+
+test('resize keeps a live boss, clamped inside the new field', () => {
+  const g = quiet()
+  const boss = enemy('boss', 92, 25, 10)
+  boss.w = 12
+  boss.h = 8
+  g.enemies = [boss, enemy('drone', 95, 10)]
+  const r = resize(g, 40, 20)
+  const kept = r.enemies.find(e => e.kind === 'boss')!
+  expect(kept).toBeDefined()
+  expect(kept.hp).toBe(10)
+  expect(kept.x).toBeLessThanOrEqual(40 - 6)
+  expect(kept.y).toBeLessThan(20)
+  expect(r.enemies.some(e => e.kind === 'drone')).toBe(false)
 })
 
 test('same seed + same inputs → identical state, and a steady run never wanders off', () => {

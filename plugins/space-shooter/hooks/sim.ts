@@ -181,8 +181,8 @@ export function resize(g: Game, w: number, h: number): Game {
   next.shots = next.shots.filter(s => s.x < w && s.y >= 0 && s.y < h)
   next.bullets = next.bullets.filter(b => b.x < w && b.x > -2 && b.y >= 0 && b.y < h)
   next.pods = next.pods.filter(p => p.x < w && p.y < h - 1)
-  // a wave spawns just past the right edge on purpose; anything further out or below the field is gone
-  next.enemies = next.enemies.filter(e => e.x <= w + 6 && e.y < h)
+  // a wave spawns just past the right edge on purpose; anything further out or below the field is gone; the boss is clamped below, never dropped
+  next.enemies = next.enemies.filter(e => e.kind === 'boss' || (e.x <= w + 6 && e.y < h))
   for (const e of next.enemies) {
     e.y = clamp(e.y, SHIP_MIN_Y, h - e.h / 2)
     e.y0 = clamp(e.y0, SHIP_MIN_Y, h - e.h / 2)
