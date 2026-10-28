@@ -1,11 +1,14 @@
 import type { Cells } from './cells'
-import type { Pause } from './link'
 
 const BANNER_BG = 0x0b1d26
 const BANNER_FG = 0xffd61f
 
-const COPY: Record<Exclude<Pause, null>, string> = {
+export type Banner = 'done' | 'start' | 'paused'
+
+const COPY: Record<Banner, string> = {
   done: 'CLAUDE IS DONE · ESC TO RETURN',
+  start: 'PRESS ANY KEY TO START',
+  paused: 'PAUSED · PRESS ANY KEY',
 }
 
 function clone(c: Cells): Cells {
@@ -25,14 +28,14 @@ function writeCentered(c: Cells, row: number, text: string, fg: number, bg: numb
 }
 
 // A banner over the middle row, one padded row above and below; the grid is copied.
-export function drawOverlay(c: Cells, reason: Exclude<Pause, null>): Cells {
+export function drawOverlay(c: Cells, banner: Banner): Cells {
   const out = clone(c)
   if (out.cols <= 0 || out.rows <= 0) return out
   const mid = Math.floor(out.rows / 2)
   for (const r of [mid - 1, mid + 1]) {
     if (r >= 0 && r < out.rows) writeCentered(out, r, '', BANNER_FG, BANNER_BG)
   }
-  writeCentered(out, mid, COPY[reason], BANNER_FG, BANNER_BG)
+  writeCentered(out, mid, COPY[banner], BANNER_FG, BANNER_BG)
   return out
 }
 

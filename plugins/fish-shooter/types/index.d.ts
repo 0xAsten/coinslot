@@ -1,11 +1,11 @@
 // Self-contained: the contract may not import. link mirrors shared/link.ts LinkState;
-// save mirrors the Snapshot in hooks/game.tsx; seed is an optional fixed sim seed.
+// save is the shell's { v, g } envelope around the Snapshot in hooks/game.tsx; seed is an optional fixed sim seed.
 declare module 'claude-code' {
   interface PluginState {
     'fish-shooter': {
       link: Shaped<{ pause: null | 'done'; bonusSeq: number }>
       seed: Shaped<number | null>
-      save: Shaped<{ coins: number; bet: number; caughtCount: number } | null>
+      save: Shaped<JsonValue | null>
     }
   }
 }

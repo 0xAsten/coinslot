@@ -129,16 +129,23 @@ test('remount restores coins, bet and caught count', async ($, on) => {
   await ui.advance(100)
   await ui.pointer({ type: 'down', x: 30, y: 8, button: 'left', in: 'game' })
   await ui.advance(1500)
-  const saved = h.save() as { coins: number; bet: number; caughtCount: number }
-  expect(saved.bet).toBe(2)
-  expect(saved.coins).toBe(198)
+  const saved = h.save() as { v: number; g: { coins: number; bet: number; caughtCount: number } }
+  expect(saved.v).toBe(1)
+  expect(saved.g.bet).toBe(2)
+  expect(saved.g.coins).toBe(198)
   await ui.unmount()
 
   // the engine remounts the Client with a fresh instance and the stored snapshot
-  h.store.save = { value: { shape: 'save-1', value: { coins: 321, bet: 4, caughtCount: 7 } }, version: 9 }
+  h.store.save = { value: { shape: 'save-1', value: { v: 1, g: { coins: 321, bet: 4, caughtCount: 7 } } }, version: 9 }
   const ui2 = await $.ui.mount(PANE)
   await ui2.resize({ columns: 70, rows: 20, in: 'game' })
   await ui2.advance(100)
+  // a remount with a save waits for a key
+  expect(await ui2.find({ type: 'Text', text: /PAUSED · PRESS ANY KEY/, in: 'game' })).toBeDefined()
+  expect(await ui2.find({ type: 'Text', text: /¢ 321.*bet x4/, in: 'game' })).toBeDefined()
+  await ui2.key({ key: 'r', in: 'game' })
+  await ui2.advance(100)
+  expect(await ui2.find({ type: 'Text', text: /PAUSED/, in: 'game' })).toBeUndefined()
   expect(await ui2.find({ type: 'Text', text: /¢ 321.*bet x4/, in: 'game' })).toBeDefined()
   await ui2.unmount()
 })
