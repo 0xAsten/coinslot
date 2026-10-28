@@ -84,6 +84,22 @@ claude plugin install tap-flyer --marketplace beasaltfish/coinslot
 
 Open the game with `/tap-flyer`.
 
+### Jump Runner
+
+```
+/plugin install jump-runner --marketplace beasaltfish/coinslot
+```
+
+The first time, Claude Code asks `Add marketplace?` for `github:beasaltfish/coinslot`: answer `y`, then pick a scope (user scope is listed first). The mod is active in that session right away.
+
+From a shell the same install is:
+
+```
+claude plugin install jump-runner --marketplace beasaltfish/coinslot
+```
+
+Open the game with `/jump-runner`.
+
 System notifications need a notification channel configured in Claude Code (`preferredNotifChannel`).
 
 ## Development

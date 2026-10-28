@@ -29,6 +29,11 @@
       "name": "tap-flyer",
       "source": "./plugins/tap-flyer",
       "description": "An original tap-to-fly game for Claude Code. Any key flaps your ember through the gaps in scrolling pillars; pauses when Claude finishes and drops glowing coins in the gaps while Claude works."
+    },
+    {
+      "name": "jump-runner",
+      "source": "./plugins/jump-runner",
+      "description": "An original endless runner for Claude Code. Space, up or a click jumps (once more in the air) over crates and under drones as the pace climbs; pauses when Claude finishes and drops glowing coins on your path while Claude works."
     }
   ]
 }
