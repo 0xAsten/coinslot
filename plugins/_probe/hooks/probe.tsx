@@ -4,6 +4,17 @@ type Entry = { t: number; event: string; detail: string; agentId?: string }
 type State = { frames: number; start: number; fps: number }
 type Props = { log: Entry[]; focused: boolean }
 
+const pad = (n: number, w = 2) => String(n).padStart(w, '0')
+
+function fmt(l: Entry): string {
+  const d = new Date(l.t)
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
+
+  return `${time} ${l.event} ${l.detail}${l.agentId ? ` [${l.agentId}]` : ''}`.replace(/\s+/g, ' ')
+}
+
+const fit = (text: string, cols: number) => (text.length > cols ? `${text.slice(0, cols - 1)}…` : text)
+
 export default function Probe(props: JsonValue, surface: ClientSurface<State>) {
   const { Box, Text } = surface.elements
   const { log, focused } = props as unknown as Props
@@ -22,6 +33,7 @@ export default function Probe(props: JsonValue, surface: ClientSurface<State>) {
 
   const s = surface.state
   const room = Math.max(1, surface.rows - 2)
+  const cols = Math.max(10, surface.columns)
   const lines = log.slice(-room)
 
   return (
@@ -31,10 +43,7 @@ export default function Probe(props: JsonValue, surface: ClientSurface<State>) {
       </Text>
       <Text dimColor>props.log length {log.length}</Text>
       {lines.map(l => (
-        <Text>
-          {new Date(l.t).toISOString().slice(11, 19)} {l.event} {l.detail}
-          {l.agentId ? ` [${l.agentId}]` : ''}
-        </Text>
+        <Text>{fit(fmt(l), cols)}</Text>
       ))}
     </Box>
   )

@@ -51,22 +51,24 @@ export const register: Register = on => {
 
   on('tool.check', async ($, e, next) => {
     const verdict = await next(e)
-    await add($, 'tool.check', `${e.tool} -> ${verdict.decision}`, e.agentId)
+    if (verdict.decision !== 'allow') {
+      await add($, 'tool.check', `${e.tool} -> ${verdict.decision}`, e.agentId)
+    }
 
     return verdict
-  })
+  }).catch(($, e, next) => next(e))
 
   on('tool.call', async ($, e, next) => {
     await add($, 'tool.call', e.tool, e.agentId)
 
     return next(e)
-  })
+  }).catch(($, e, next) => next(e))
 
   on('ui.focus', async ($, e, next) => {
     await add($, 'ui.focus', `${e.component}/${e.requestId} ${e.element ?? '(engine stop)'} by ${e.origin}`)
 
     return next(e)
-  })
+  }).catch(($, e, next) => next(e))
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     if (e.surface !== 'terminal' && e.surface !== 'desktop') {
