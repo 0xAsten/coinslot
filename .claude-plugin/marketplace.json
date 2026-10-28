@@ -1,5 +1,13 @@
 {
   "name": "coinslot",
-  "owner": { "name": "beasaltfish" },
-  "plugins": []
+  "owner": {
+    "name": "beasaltfish"
+  },
+  "plugins": [
+    {
+      "name": "reef-net",
+      "source": "./plugins/reef-net",
+      "description": "An original arcade reef-fishing game for Claude Code. Pauses when Claude finishes and drops golden fish while Claude works."
+    }
+  ]
 }

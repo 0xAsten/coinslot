@@ -8,7 +8,7 @@ Original terminal mini-games, each a Claude Code mod that runs in a pane beside 
 /plugin install reef-net --marketplace beasaltfish/coinslot
 ```
 
-(Placeholder: the repository slug is not final and reef-net is not published yet.)
+System notifications need a notification channel configured in Claude Code (`preferredNotifChannel`).
 
 ## Development
 
