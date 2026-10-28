@@ -127,7 +127,7 @@ Game: a snake on a grid of square-looking cells (2 columns × 1 row per cell), a
 
 **Files:** `plugins/space-shooter/`, same file set.
 
-Game: a ship on the left moves with the arrows and toward the pointer; it fires automatically (no key-up exists, so no hold-to-fire). Waves of enemies cross from the right; every 5th wave is a boss with a health bar. 3 lives, brief invulnerability after a hit. Bonus: a supply pod flies in — weapon level +1 (max 3) or a one-hit shield (pods on screen capped at 2). Policy `{ start: true, escape: true, idleMs: 3000 }`.
+Game: a ship on the left moves with the arrows and toward the pointer; it fires automatically (no key-up exists, so no hold-to-fire). Waves of enemies cross from the right; every 5th wave is a boss with a health bar. 3 lives, brief invulnerability after a hit. Bonus: a supply pod flies in — weapon level +1 (max 3) or a one-hit shield (pods on screen capped at 2). Policy `{ start: true, escape: true }`; `p` pauses (shell, all games — author decision 2026-10-28 replaced idle pause).
 
 - [ ] **Step 1: Failing tests**: `auto-fire spawns shots at the weapon's rate`; `a shot destroys an enemy and scores`; `a hit costs a life and grants invulnerability for its window`; `the 5th wave is a boss and the 6th wave follows its defeat`; `weapon level never exceeds 3`; `30 bonuses → at most 2 pods, none spawned overlapping an enemy`; `pointer move steers the ship toward the pointer`; `resize clamps the ship and drops off-field entities`; determinism; render size; pane test.
 - [ ] **Step 2:** Run tests. Expected: FAIL.
@@ -139,7 +139,7 @@ Game: a ship on the left moves with the arrows and toward the pointer; it fires 
 
 **Files:** `plugins/tap-flyer/`, same file set.
 
-Game: an original flyer (not a bird with green pipes) falls under gravity; any key or click gives one upward impulse. Obstacle columns with gaps scroll left; passing a gap scores 1. Touching an obstacle or the floor ends the run. Bonus: a coin in the middle of an upcoming gap, worth 3 (cap 2 on screen; never inside an obstacle). Policy `{ start: true, escape: true, idleMs: 3000 }`.
+Game: an original flyer (not a bird with green pipes) falls under gravity; any key or click gives one upward impulse. Obstacle columns with gaps scroll left; passing a gap scores 1. Touching an obstacle or the floor ends the run. Bonus: a coin in the middle of an upcoming gap, worth 3 (cap 2 on screen; never inside an obstacle). Policy `{ start: true, escape: true }`; `p` pauses (shell, all games — author decision 2026-10-28 replaced idle pause).
 
 - [ ] **Step 1: Failing tests**: `a tap sets upward velocity, gravity pulls down`; `passing a gap scores once`; `obstacle and floor contact end the run`; `a key in the first 0.5 s after the end does not restart`; `30 bonuses → at most 2 coins, each inside a gap`; `gap size never shrinks below the minimum`; `resize keeps the flyer and gaps inside`; determinism; render size; pane test.
 - [ ] **Step 2:** Run tests. Expected: FAIL.
@@ -151,7 +151,7 @@ Game: an original flyer (not a bird with green pipes) falls under gravity; any k
 
 **Files:** `plugins/jump-runner/`, same file set.
 
-Game: an original runner (not a dinosaur) runs right on the ground; space, ↑ or a click jumps (fixed height; one extra jump in the air). Ground obstacles and low flyers scroll in; speed ramps up over time; distance is the score. Bonus: a coin on the running path, worth 10 (cap 2; never on or touching an obstacle). Policy `{ start: true, escape: true, idleMs: 3000 }`.
+Game: an original runner (not a dinosaur) runs right on the ground; space, ↑ or a click jumps (fixed height; one extra jump in the air). Ground obstacles and low flyers scroll in; speed ramps up over time; distance is the score. Bonus: a coin on the running path, worth 10 (cap 2; never on or touching an obstacle). Policy `{ start: true, escape: true }`; `p` pauses (shell, all games — author decision 2026-10-28 replaced idle pause).
 
 - [ ] **Step 1: Failing tests**: `a jump has a fixed height and the air jump works once`; `obstacle contact ends the run`; `speed ramps but never past MAX_SPEED`; `consecutive obstacles always leave a clearable gap at the current speed`; `a key in the first 0.5 s after the end does not restart`; `30 bonuses → at most 2 coins, none touching an obstacle`; `resize keeps the runner on the ground`; determinism; render size; pane test.
 - [ ] **Step 2:** Run tests. Expected: FAIL.
