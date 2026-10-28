@@ -1,7 +1,7 @@
 {
   "name": "brick-breaker",
   "version": "0.1.0",
-  "description": "An original arcade brick-smashing game in a pane for Claude Code: bounce the ball off your paddle, burst colored bricks into sparks and clear every layout. Pauses when Claude finishes and drops power-up capsules while Claude works. Open it with /coinslot-brick-breaker.",
+  "description": "An original arcade brick-breaker game for Claude Code. Bounce the ball and burst every brick. Pauses when Claude finishes; Claude's tool calls drop power-up capsules.",
   "author": {
     "name": "beasaltfish"
   },

@@ -1,6 +1,6 @@
 # Coin Slot
 
-Original terminal mini-games, each a Claude Code mod that runs in a pane beside the chat.
+Original terminal mini-games, each a Claude Code mod that runs in a pane beside the chat. Type `/coinslot` to list every installed game.
 
 ## Install
 

@@ -1,7 +1,7 @@
 {
   "name": "fish-shooter",
   "version": "0.1.0",
-  "description": "An original arcade reef-fishing game in a pane for Claude Code: aim a net cannon, catch fish, turtles, mantas and the rare whale. Pauses when Claude finishes and drops golden fish while Claude works. Open it with /coinslot-fish-shooter.",
+  "description": "An original arcade fish-shooter game for Claude Code. Aim a net cannon and catch fish. Pauses when Claude finishes; Claude's tool calls drop golden fish.",
   "author": {
     "name": "beasaltfish"
   },

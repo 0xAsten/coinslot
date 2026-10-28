@@ -1,7 +1,7 @@
 {
   "name": "space-shooter",
   "version": "0.1.0",
-  "description": "An original side-scrolling space shooter in a pane for Claude Code: steer your ship with the mouse or arrows, auto-fire through waves of enemies and beat a boss every fifth wave. Pauses when Claude finishes and drops supply pods while Claude works. Open it with /coinslot-space-shooter.",
+  "description": "An original side-scrolling space shooter for Claude Code. Fly through waves and beat a boss every fifth wave. Pauses when Claude finishes; Claude's tool calls drop supply pods.",
   "author": {
     "name": "beasaltfish"
   },

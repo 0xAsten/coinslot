@@ -1,7 +1,7 @@
 {
   "name": "jump-runner",
   "version": "0.1.0",
-  "description": "An original endless runner in a pane for Claude Code: a little courier sprints along a rooftop, and space, up or a click jumps (with one extra jump in the air) over crates and under drones as the pace climbs. Pauses when Claude finishes and drops glowing coins on your path while Claude works. Open it with /coinslot-jump-runner.",
+  "description": "An original endless runner for Claude Code. Jump over crates and under drones as the pace climbs. Pauses when Claude finishes; Claude's tool calls drop glowing coins.",
   "author": {
     "name": "beasaltfish"
   },
