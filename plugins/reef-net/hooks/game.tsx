@@ -27,7 +27,7 @@ type State = { ctl: Ctl; n: number }
 const TICK_MS = 33
 const SAVE_EVERY_TICKS = 30
 const MIN_COLS = 60
-const MIN_ROWS = 16
+const MIN_ROWS = 10
 // The engine refuses a Client tree over 100,000 characters. A smooth gradient makes
 // nearly every cell its own Text, so colors are reduced to 8 levels a channel,
 // which merges neighbours: 100x26 drops from ~2400 runs to ~600.

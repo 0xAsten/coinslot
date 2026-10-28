@@ -47,7 +47,7 @@ export function drawSizeNotice(cols: number, rows: number): Cells {
     bg: Array(n).fill(BANNER_BG),
   }
   if (out.cols > 0 && out.rows > 0) {
-    writeCentered(out, Math.floor(out.rows / 2), 'Make the terminal wider or taller (60×16).', BANNER_FG, BANNER_BG)
+    writeCentered(out, Math.floor(out.rows / 2), 'Make the terminal wider or taller (60×10).', BANNER_FG, BANNER_BG)
   }
   return out
 }

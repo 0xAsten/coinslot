@@ -83,8 +83,7 @@ test('bonusSeq +2 spawns two golden fish', async ($, on) => {
   await ui.unmount()
 })
 
-// the full copy is 42 characters, so a 40-column region shows it cut at the edge
-test('a 40x10 region shows the size notice, then a 70x20 resize resumes with coins kept', async ($, on) => {
+test('a 70x8 region shows the size notice, then a 70x13 resize resumes with coins kept', async ($, on) => {
   wire(on, idle)
   const ui = await $.ui.mount(PANE)
   await ui.resize({ columns: 70, rows: 20, in: 'reef' })
@@ -93,11 +92,11 @@ test('a 40x10 region shows the size notice, then a 70x20 resize resumes with coi
   await ui.advance(100)
   expect(await ui.find({ type: 'Text', text: /¢ 199/, in: 'reef' })).toBeDefined()
 
-  await ui.resize({ columns: 40, rows: 10, in: 'reef' })
+  await ui.resize({ columns: 70, rows: 8, in: 'reef' })
   await ui.advance(100)
   expect(await ui.find({ type: 'Text', text: /Make the terminal wider or/, in: 'reef' })).toBeDefined()
 
-  await ui.resize({ columns: 70, rows: 20, in: 'reef' })
+  await ui.resize({ columns: 70, rows: 13, in: 'reef' })
   await ui.advance(100)
   expect(await ui.find({ type: 'Text', text: /¢ 199/, in: 'reef' })).toBeDefined()
   await ui.unmount()
