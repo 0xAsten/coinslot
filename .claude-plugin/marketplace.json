@@ -24,6 +24,11 @@
       "name": "space-shooter",
       "source": "./plugins/space-shooter",
       "description": "An original side-scrolling space shooter for Claude Code. Auto-fire through waves, beat a boss every fifth wave, pause when Claude finishes and catch supply pods while Claude works."
+    },
+    {
+      "name": "tap-flyer",
+      "source": "./plugins/tap-flyer",
+      "description": "An original tap-to-fly game for Claude Code. Any key flaps your ember through the gaps in scrolling pillars; pauses when Claude finishes and drops glowing coins in the gaps while Claude works."
     }
   ]
 }
