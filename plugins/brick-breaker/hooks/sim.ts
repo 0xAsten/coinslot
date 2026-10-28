@@ -59,7 +59,6 @@ const BALL_SPEED_MAX = 62
 const CAPSULE_SPEED = 16
 const GRAVITY = 46
 const BURST = 16
-const CAPSULE_ON_BRICK = 0.08
 const MAX_SUBSTEP = 0.8
 
 // Layouts cycle; a digit is the brick's color, '.' a gap. Rows past what fits are dropped.
@@ -267,7 +266,6 @@ function moveBall(g: Game, b: Ball, dt: number): void {
       const cx = (k % COLS) * bw + bw / 2
       const cy = BRICK_TOP + (Math.floor(k / COLS) + 0.5) * bh
       burst(g, cx, cy, BRICK_COLORS[color]!)
-      if (rand(g) < CAPSULE_ON_BRICK) spawnCapsule(g, cx, cy)
 
       return
     }

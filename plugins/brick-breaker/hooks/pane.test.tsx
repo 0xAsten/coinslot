@@ -38,9 +38,22 @@ test('opens on PRESS ANY KEY TO START, a key launches play, HUD shows score and 
     expect(await ui.find({ type: 'Text', text: /SCORE 0/, in: 'game' })).toBeDefined()
     expect(await ui.find({ type: 'Text', text: /♥♥♥/, in: 'game' })).toBeDefined()
 
+    // the parked ball blinks a launch hint; sample it over time
+    const hintSeen = async (n: number): Promise<boolean> => {
+      let seen = false
+      for (let i = 0; i < n; i += 1) {
+        await ui.advance(100)
+        if ((await ui.find({ type: 'Text', text: /space \/ click to launch/, in: 'game' })) !== undefined) seen = true
+      }
+
+      return seen
+    }
+    expect(await hintSeen(12)).toBe(true)
+
     await ui.key({ key: 'space', in: 'game' })
-    await ui.advance(100)
-    expect(await ui.find({ type: 'Text', text: /SCORE 0/, in: 'game' })).toBeDefined()
+    // the ball left the paddle: the hint never comes back
+    expect(await hintSeen(5)).toBe(false)
+    expect(await ui.find({ type: 'Text', text: /SCORE \d+/, in: 'game' })).toBeDefined()
     await ui.unmount()
   }
 })
