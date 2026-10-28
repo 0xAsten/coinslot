@@ -1,0 +1,4 @@
+node_modules/
+vendor/
+plugins/*/.claude-plugin/types/
+.superpowers/
