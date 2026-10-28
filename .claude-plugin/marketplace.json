@@ -19,6 +19,11 @@
       "name": "snake",
       "source": "./plugins/snake",
       "description": "An original snake game for Claude Code. Pauses when Claude finishes and drops glowing bonus food while Claude works."
+    },
+    {
+      "name": "space-shooter",
+      "source": "./plugins/space-shooter",
+      "description": "An original side-scrolling space shooter for Claude Code. Auto-fire through waves, beat a boss every fifth wave, pause when Claude finishes and catch supply pods while Claude works."
     }
   ]
 }

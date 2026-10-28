@@ -52,6 +52,22 @@ claude plugin install snake --marketplace beasaltfish/coinslot
 
 Open the game with `/snake`.
 
+### Space Shooter
+
+```
+/plugin install space-shooter --marketplace beasaltfish/coinslot
+```
+
+The first time, Claude Code asks `Add marketplace?` for `github:beasaltfish/coinslot`: answer `y`, then pick a scope (user scope is listed first). The mod is active in that session right away.
+
+From a shell the same install is:
+
+```
+claude plugin install space-shooter --marketplace beasaltfish/coinslot
+```
+
+Open the game with `/space-shooter`.
+
 System notifications need a notification channel configured in Claude Code (`preferredNotifChannel`).
 
 ## Development
