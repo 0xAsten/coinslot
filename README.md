@@ -100,6 +100,8 @@ claude plugin install jump-runner --marketplace beasaltfish/coinslot
 
 Open the game with `/coinslot-jump-runner`.
 
+## Notifications
+
 System notifications need a notification channel configured in Claude Code (`preferredNotifChannel`).
 
 ## Development
@@ -108,5 +110,7 @@ System notifications need a notification channel configured in Claude Code (`pre
 bun run bundle   # copy shared/*.ts into plugins/*/hooks/shared/
 bun run check    # bundle --check, validate, tsc, test for every plugin
 ```
+
+Changing a game's saved state shape? Bump `saveV` in its GameSpec so old saves are discarded instead of loaded.
 
 Engine types are not committed; run `scripts/vendor-types.sh <path-to-claude-code.d.ts>` once per Claude Code build.

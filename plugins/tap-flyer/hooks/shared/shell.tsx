@@ -22,7 +22,8 @@ const COLOR_MASK = 0xe0e0e0
 export type Policy = {
   // wait for a key before the first tick of a fresh run
   start: boolean
-  // escape pauses a running game (a game that has no use for escape keeps it free)
+  // the engine keeps Esc to return focus to the chat, so this is inert in real Claude Code
+  // (kept for hosts that deliver Esc, where it pauses a running game)
   escape: boolean
 }
 
