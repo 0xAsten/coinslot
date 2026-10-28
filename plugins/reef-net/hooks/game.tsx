@@ -81,7 +81,9 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
 
       const tooSmall = cols < MIN_COLS || rows < MIN_ROWS
       if (tooSmall) return
+      let changed = false
       if (!mine.game) {
+        changed = true
         mine.game = newGame(cols, rows * 2, now & 0xffff)
         if (mine.restore) {
           mine.game.coins = mine.restore.coins
@@ -89,12 +91,13 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
           mine.game.caughtCount = mine.restore.caughtCount
         }
       } else if (mine.game.w !== cols || mine.game.h !== rows * 2) {
+        changed = true
         mine.game = resize(mine.game, cols, rows * 2)
       }
 
       if (!p.focused || p.pause !== null) {
         mine.pending = {}
-        surface.setState({ ctl: mine, n })
+        if (changed) surface.setState({ ctl: mine, n })
         return
       }
 
@@ -125,7 +128,10 @@ export default function Reef(raw: JsonValue, surface: ClientSurface<State>) {
     })
 
     surface.onKey((e: ClientKeyEvent) => {
-      if (mine.props.pause !== null) return
+      if (mine.props.pause !== null) {
+        if (e.key !== 'escape') surface.post({ type: 'resume' })
+        return
+      }
       const p = { ...mine.pending }
       switch (e.key) {
         case ' ':

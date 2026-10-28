@@ -136,3 +136,17 @@ test('remount restores coins, bet and caught count', async ($, on) => {
   expect(await ui2.find({ type: 'Text', text: /¢ 321.*bet x4/, in: 'reef' })).toBeDefined()
   await ui2.unmount()
 })
+
+test('a key while paused posts resume', async ($, on) => {
+  const h = wire(on, { pause: 'done', bonusSeq: 0 })
+  const ui = await $.ui.mount(PANE)
+  await ui.resize({ columns: 70, rows: 20, in: 'reef' })
+  await ui.advance(100)
+  await ui.key({ key: 'escape', in: 'reef' })
+  await ui.advance(100)
+  expect(h.link().pause).toBe('done')
+  await ui.key({ key: ' ', in: 'reef' })
+  await ui.advance(100)
+  expect(h.link().pause).toBe(null)
+  await ui.unmount()
+})
