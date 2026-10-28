@@ -2,12 +2,14 @@ import type { ClientKeyEvent, ClientPointerEvent, ClientSurface, JsonValue, Rend
 
 import { toRuns, hex } from './cells'
 import type { Cells } from './cells'
+import { isEnvelope } from './envelope'
 import type { Pause } from './link'
 import { drawOverlay, drawSizeNotice } from './overlay'
 import type { Banner } from './overlay'
 
 export const TICK_MS = 33
 export const SAVE_EVERY_TICKS = 30
+// The default envelope version; a game that changes its state shape sets `saveV`.
 export const SAVE_V = 1
 
 const MIN_COLS = 40
@@ -29,6 +31,10 @@ export type Policy = {
 // `h` is pixels: two per terminal row.
 export type GameSpec<G, I> = {
   title: string
+  // shown before the first frame; defaults to `${title}: click here to focus.`
+  hint?: string
+  // bump when the saved state changes shape: older saves are then ignored
+  saveV?: number
   policy: Policy
   create(cols: number, h: number, seed: number): G
   resize(g: G, cols: number, h: number): G
@@ -71,21 +77,20 @@ function coarse(c: Cells): Cells {
 }
 
 // The saved envelope: { v: SAVE_V, g }. A different version or any other shape is no save.
-function savedGame(v: unknown): JsonValue | undefined {
-  if (v === null || typeof v !== 'object' || Array.isArray(v)) return undefined
-  const o = v as { v?: unknown; g?: unknown }
-  if (o.v !== SAVE_V || o.g === undefined) return undefined
+function savedGame(v: unknown, version: number): JsonValue | undefined {
+  if (!isEnvelope(v) || v.v !== version) return undefined
 
-  return o.g as JsonValue
+  return v.g as JsonValue
 }
 
 export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: ClientSurface<ShellState>): RenderElement {
   const { Box, Text } = surface.elements
   const props = raw as unknown as ShellProps
+  const saveV = spec.saveV ?? SAVE_V
 
   let ctl: Ctl<G, I>
   if (surface.state === undefined) {
-    const restore = savedGame(props.save)
+    const restore = savedGame(props.save, saveV)
     ctl = {
       input: spec.noInput(),
       seed: props.seed ?? Date.now() & 0xffff,
@@ -111,20 +116,26 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
       const text = JSON.stringify(g)
       if (text === mine.lastSent) return
       mine.lastSent = text
-      surface.post({ type: 'save', save: { v: SAVE_V, g } })
+      surface.post({ type: 'save', save: { v: saveV, g } })
     }
 
     const make = (cols: number, rows: number): G => {
       let g = spec.create(cols, rows * 2, mine.seed)
       if (mine.restore !== undefined) {
         const saved = mine.restore
-        const back = spec.load ? spec.load(g, saved) : spec.resize(saved as unknown as G, cols, rows * 2)
+        let back: G | null
+        try {
+          back = spec.load ? spec.load(g, saved) : spec.resize(saved as unknown as G, cols, rows * 2)
+        } catch {
+          back = null
+        }
         if (back === null) {
-          // an unusable save plays as a fresh run
+          // an unusable save plays as a fresh run, and is overwritten by the next save
           mine.hold = spec.policy.start ? 'start' : null
         } else {
           g = back
         }
+        mine.restore = undefined
       }
 
       return g
@@ -227,7 +238,7 @@ export function runShell<G, I>(spec: GameSpec<G, I>, raw: JsonValue, surface: Cl
     const banner: Banner | null = props.pause !== null ? props.pause : ctl.hold
     if (banner !== null) cells = drawOverlay(cells, banner)
   }
-  if (!cells) return <Text dimColor>{spec.title}: click here to focus.</Text>
+  if (!cells) return <Text dimColor>{spec.hint ?? `${spec.title}: click here to focus.`}</Text>
 
   const lines = toRuns(coarse(cells)).map(row => (
     <Box flexDirection="row">

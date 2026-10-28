@@ -51,6 +51,7 @@ function pointer(e: ClientPointerEvent, i: Input): Input {
 // Only the purse is kept across a remount; the lagoon is rebuilt.
 export const SPEC: GameSpec<Game, Input> = {
   title: 'Fish Shooter',
+  hint: 'Fish Shooter: click here to focus, then fire.',
   policy: { start: false, escape: false, idleMs: null },
   create: (cols, h, seed) => newGame(cols, h, seed),
   resize,

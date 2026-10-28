@@ -127,6 +127,27 @@ for (const [name, bad] of [['another version', { v: 0, g: {} }], ['garbage', 'ga
   })
 }
 
+test('a valid envelope the game cannot restore starts fresh and is overwritten', async ($, on) => {
+  const h = wire(on, { save: { v: 1, g: {} } })
+  const ui = await open($)
+  expect(await has(ui, /PRESS ANY KEY TO START/)).toBe(true)
+  expect(await has(ui, /counter 0\b/)).toBe(true)
+  await press(ui, 'x')
+  await ui.advance(1100)
+  expect(await has(ui, /counter [1-9]\d*\b/)).toBe(true)
+  expect(h.saves.length).toBeGreaterThan(0)
+  expect(h.saves[0]).toMatchObject({ v: 1, g: { counter: expect.any(Number), x: expect.any(Number) } })
+  await ui.unmount()
+})
+
+test('a save with another saveV is ignored', async ($, on) => {
+  wire(on, { save: { v: 2, g: { counter: 42, x: 3, w: 70, h: 40, frozen: false, last: '-', clicks: 0 } } })
+  const ui = await open($)
+  expect(await has(ui, /PRESS ANY KEY TO START/)).toBe(true)
+  expect(await has(ui, /counter 0\b/)).toBe(true)
+  await ui.unmount()
+})
+
 test('resize keeps the run', async ($, on) => {
   wire(on)
   const ui = await open($, 70, 20)

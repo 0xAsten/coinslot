@@ -8,7 +8,7 @@ import { parseSave, readSave, readSeed, writeSave } from '../save-store'
 import { registerClaudeLink } from './hooks-link'
 import { onResume } from './link'
 
-export type PaneOpts = { pane: string; title: string; command: string; description: string }
+export type PaneOpts = { pane: string; title: string; command: string; description: string; opened?: string }
 
 // Everything a game's register.tsx has in common: its command, the pane that hosts
 // ./game.tsx, the save the shell posts, and the link hooks.
@@ -26,7 +26,7 @@ export function registerGamePane(on: On, opts: PaneOpts): void {
     await applyLink($, onResume)
     await $.ui.open({ id: opts.pane, title: opts.title, focus: true, rows: 28 })
 
-    return { text: `${opts.title} opened. Click the pane to play; esc returns to chat.` }
+    return { text: opts.opened ?? `${opts.title} opened. Click the pane to play; esc returns to chat.` }
   })
 
   on('ui.message', { data: { type: 'save' } }, async ($, e, next) => {

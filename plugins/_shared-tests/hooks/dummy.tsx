@@ -22,7 +22,12 @@ export const SPEC: GameSpec<G, I> = {
   title: 'Dummy',
   policy: { start: true, escape: true, idleMs: 3000 },
   create: (cols, h) => ({ w: cols, h, x: 0, counter: 0, bonus: 0, frozen: false, last: '-', clicks: 0 }),
-  resize: (g, cols, h) => ({ ...g, w: cols, h, x: g.x % cols, bonus: g.bonus ?? 0 }),
+  resize: (g, cols, h) => {
+    // a save the dummy cannot make sense of: the shell must survive it
+    if (typeof g.x !== 'number') throw new Error('bad save')
+
+    return { ...g, w: cols, h, x: g.x % cols, bonus: g.bonus ?? 0 }
+  },
   step: (g, _dt, i) => {
     const last = i.keys.length > 0 ? i.keys[i.keys.length - 1]! : g.last
     const frozen = i.freeze ? !g.frozen : g.frozen
