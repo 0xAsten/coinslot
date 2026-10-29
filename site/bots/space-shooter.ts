@@ -8,5 +8,9 @@ export function bot(g: Game): Input {
   const near = g.bullets.find(b => Math.abs(b.x - g.ship.x) <= 4 && b.y < g.ship.y && g.ship.y - b.y <= 12)
   if (near) x = g.ship.x + (near.x >= g.ship.x ? -8 : 8)
 
-  return { aimTo: { x, y: target ? target.y : g.ship.y }, any: g.over }
+  // stay below the enemy rows: 12 px under the target, never above 60% of the field
+  const floor = g.h * 0.6
+  const y = target ? Math.max(target.y + 12, floor) : Math.max(g.ship.y, floor)
+
+  return { aimTo: { x, y: Math.min(y, g.h - 3) }, any: g.over }
 }
