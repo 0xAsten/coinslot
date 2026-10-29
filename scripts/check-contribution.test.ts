@@ -503,15 +503,55 @@ test('--no-types: syntactic rules still run without the type layer', () => {
   const { files, head } = fixture()
   files[`${P}hooks/sim.ts`] = bad
   const got = run(files, head, [], { types: false, vendorTypes: '/nonexistent/claude-code.d.ts' })
-  expect(rulesAll(got)).toEqual(['banned-token', 'no-any'])
+  expect(rulesAll(got)).toEqual(['banned-token', 'global-allowlist', 'no-any'])
   const clean = fixture()
   expect(run(clean.files, clean.head, [], { types: false, vendorTypes: '/nonexistent/claude-code.d.ts' })).toEqual([])
   const save = fixture()
   save.files[`${P}hooks/save-store.ts`] += '\nexport const z = eval("1")\n'
-  expect(rulesAll(run(save.files, save.head, [], { types: false }))).toEqual(['banned-token'])
+  expect(rulesAll(run(save.files, save.head, [], { types: false }))).toEqual(['banned-token', 'global-allowlist'])
 })
 
 test('without --no-types a missing vendor file is a hard error', () => {
   const { files, head } = fixture()
   expect(() => run(files, head, [], { types: true, vendorTypes: '/nonexistent/claude-code.d.ts' })).toThrow('vendor-types.sh')
+})
+
+// ---- final review fixes ----
+
+test('without the type layer the global allowlist still catches reflection to Function', () => {
+  const probe = 'export const F = Object.values(Object.getOwnPropertyDescriptors(Object.getPrototypeOf(() => 0))).map(d => d.value).find(f => f.name.length === 8)\n'
+  const { files, head } = fixture()
+  files[`${P}hooks/sim.ts`] = probe
+  const got = run(files, head, [], { types: false, vendorTypes: '/nonexistent/claude-code.d.ts' }).filter(x => x.file.endsWith('/sim.ts'))
+  expect(got.some(x => x.rule === 'global-allowlist' && x.detail === 'Object')).toBe(true)
+  // no type-error noise in that mode
+  expect(got.some(x => x.rule === 'type-error')).toBe(false)
+  // and a Math index call still resolves to the lib Math
+  files[`${P}hooks/sim.ts`] = 'export const a = (xs: number[], i: number) => xs[Math.floor(i)]\n'
+  expect(run(files, head, [], { types: false }).filter(x => x.file.endsWith('/sim.ts'))).toEqual([])
+})
+
+test('placeholders are rejected: TODO author, <YOUR NAME>, TODO descriptions', () => {
+  const { files, head } = fixture()
+  const pj = JSON.parse(files[`${P}.claude-plugin/plugin.json`]!)
+  const put = (o: object): void => void (files[`${P}.claude-plugin/plugin.json`] = JSON.stringify(o))
+  for (const name of ['TODO', ' todo ', '<YOUR NAME>', '<your name>']) {
+    put({ ...pj, author: { name } })
+    expect(rules(run(files, head)), name).toEqual(['author'])
+  }
+  put({ ...pj, description: 'TODO' })
+  expect(rules(run(files, head))).toEqual(['author'])
+  put(pj)
+  expect(rules(run(files, headWith([{ ...ENTRY, description: ' todo ' }])))).toEqual(['marketplace-append'])
+})
+
+test('ids: single hyphens only, 3 to 31 chars', () => {
+  for (const id of ['foo-', 'foo--bar', '-foo', 'ab', 'a'.repeat(32), 'Foo']) {
+    const v = checkContribution({ changed: [`plugins/${id}/hooks/sim.ts`], read: () => '', baseMarketplace, headMarketplace: baseMarketplace, sharedFiles: [], types: false })
+    expect(rules(v), id).toEqual(['one-plugin'])
+  }
+  expect(() => scaffoldFiles('foo-', 'X')).toThrow()
+  expect(() => scaffoldFiles('foo--bar', 'X')).toThrow()
+  expect(() => scaffoldFiles('a'.repeat(32), 'X')).toThrow()
+  expect(Object.keys(scaffoldFiles('foo-bar2', 'X')).length).toBeGreaterThan(0)
 })

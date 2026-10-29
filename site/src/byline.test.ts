@@ -13,3 +13,8 @@ test('byline cuts long names to 24 chars plus an ellipsis', () => {
 test('byline trims', () => {
   expect(byline('  ada  ')).toBe('by ada')
 })
+
+test('byline cuts on code points, not UTF-16 units', () => {
+  const name = `${'a'.repeat(23)}😀tail`
+  expect(byline(name)).toBe(`by ${'a'.repeat(23)}😀…`)
+})

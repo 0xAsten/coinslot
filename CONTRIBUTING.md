@@ -33,4 +33,9 @@ Agents and humans: all rules, the file whitelist and the checks to run are in [A
 
 ## For the maintainer
 
-CI screens PRs with `--no-types` (the engine types are not in the repo). Before merging, run `bun scripts/check-contribution.ts --root <pr checkout> <base>` locally with the types in `vendor/`, review the diff by hand, then run the PR's tests in an isolated environment (a throwaway container or VM), never on a machine with credentials.
+CI screens PRs with `--no-types` (the engine types are not in the repo), so the type-error layer did not run; the global allowlist and index rules did. Before merging:
+
+1. Run the checker from a clean `main` checkout, with the types in `vendor/`: `bun scripts/check-contribution.ts --root <pr worktree> <base>`.
+2. Keep the PR in a separate `git worktree` (or a throwaway clone via `gh pr checkout`). Never `bun install`, `bun run` or `bun test` inside the PR checkout before review: its `bunfig.toml` preload would run.
+3. Review the diff by hand.
+4. Run the PR's tests only in an isolated container or VM, never on a machine with credentials.

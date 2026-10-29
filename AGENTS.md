@@ -203,6 +203,7 @@ bun scripts/check-contribution.ts upstream/main
 - `bun run check` runs, for the marketplace and every game: shared-bundle check (`bundle --check`), `claude plugin validate`, `tsc` (via `npx -y -p typescript@5.9.3`, which needs the network the first time unless cached), and `claude plugin test`, which runs your `hooks/*.test.ts`. It needs `vendor/claude-code.d.ts` (section 1).
 - `bun test site scripts` runs the site and scripts tests, including the liveness bar from section 3 for every game. It must pass without your editing anything under `scripts/` or `site/`.
 - `check-contribution.ts` diffs `<baseRef>...HEAD`, so **commit first**; it only sees committed changes. `<baseRef>` is the upstream `main` (`upstream/main`), not your fork's. Use `--root <dir>` only to check a checkout elsewhere: `bun scripts/check-contribution.ts --root <dir> upstream/main`. It prints `contribution check: clean` on success; otherwise each line is `file: [rule] detail`. Fix the code, commit again, rerun. Without `vendor/claude-code.d.ts` it stops with an error; get the types (section 1) rather than skipping.
+- The checker compares your marketplace entry against `main` at the point your branch left it (the merge base). If it or GitHub reports a conflict because `main` moved, run `git fetch upstream && git rebase upstream/main`, then rerun the checks.
 - Do not open the PR until all of these pass.
 
 ## 9. Open the pull request
@@ -232,6 +233,7 @@ One game per PR. Do not push to `main` of the upstream repo, and never commit `v
 
 `check-contribution.ts` is a tripwire, not a sandbox: it catches the obvious and keeps the diff small, but it cannot prove code is safe. CI runs it with `--no-types` (the engine types are not in the repo), so its type layer did not run. Before merging:
 
-1. Run the full checker locally, with types: `bun scripts/check-contribution.ts --root <pr checkout> <base>` (needs `vendor/claude-code.d.ts`).
-2. Review the diff by hand.
-3. Only then run the PR's tests, in an isolated environment (a throwaway container or VM), never on a machine with credentials.
+1. Run the full checker locally, with types, **from a clean `main` checkout** of this repo (needs `vendor/claude-code.d.ts`): `bun scripts/check-contribution.ts --root <pr worktree> <base>`.
+2. Put the PR in a separate `git worktree` (or `gh pr checkout` into a throwaway clone). Never run `bun install`, `bun run` or `bun test` inside the PR checkout before review: its `bunfig.toml` preload would run.
+3. Review the diff by hand.
+4. Only then run the PR's tests, in an isolated environment (a throwaway container or VM), never on a machine with credentials.

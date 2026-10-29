@@ -17,7 +17,8 @@ export type Input = {
 }
 
 const MARKET = '.claude-plugin/marketplace.json'
-const ID = /^[a-z][a-z0-9-]{2,30}$/
+const ID_SHAPE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/
+const isId = (id: string): boolean => id.length >= 3 && id.length <= 31 && ID_SHAPE.test(id)
 const HAND = new Set(['hooks/sim.ts', 'hooks/render.ts', 'hooks/game.tsx', 'hooks/showcase.ts'])
 const TEST = /^hooks\/[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.test\.tsx?$/
 const SHARED = /^hooks\/shared\/[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.tsx?$/
@@ -79,7 +80,7 @@ function typeOnlyExport(n: ts.ExportDeclaration): boolean {
   return !!c && ts.isNamedExports(c) && c.elements.length > 0 && c.elements.every(e => e.isTypeOnly)
 }
 
-export type Typed = { sf: ts.SourceFile; program: ts.Program; checker: ts.TypeChecker; own(sf: ts.SourceFile): boolean }
+export type Typed = { sf: ts.SourceFile; program: ts.Program; checker: ts.TypeChecker; semantic: boolean; own(sf: ts.SourceFile): boolean }
 
 const SAFE_BINARY = new Set([
   ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken, ts.SyntaxKind.PercentToken,
@@ -154,7 +155,7 @@ export function scanSource(file: string, text: string, isTest: boolean, typed?: 
 
   const suppress = /@ts-(?:ignore|expect-error|nocheck)/.exec(text.slice(minPos))
   if (suppress) out.push(v(file, 'banned-token', suppress[0]))
-  if (typed) {
+  if (typed?.semantic) {
     for (const d of [...typed.program.getSyntacticDiagnostics(sf), ...typed.program.getSemanticDiagnostics(sf)]) {
       if ((d.start ?? 0) < minPos) continue
       const msg = ts.flattenDiagnosticMessageText(d.messageText, ' ')
@@ -212,7 +213,13 @@ export function scanSource(file: string, text: string, isTest: boolean, typed?: 
 const libCache = new Map<string, ts.SourceFile>()
 
 // One in-memory program over the plugin's files, the vendored claude-code types and lib es2023.
-function buildProgram(vdir: string, files: Map<string, string>, vendorTypes: string): ts.Program {
+// Without the engine types, 'claude-code' is a shorthand ambient module: every import is `any`,
+// so identifiers still resolve and the allowlist layer still runs; only type errors are lost.
+const STUB = "declare module 'claude-code'\ndeclare module 'claude-code/testing'\n"
+
+function buildProgram(vdir: string, files: Map<string, string>, vendorTypes: string | null): ts.Program {
+  const stubPath = `${vdir}__stub__/claude-code.d.ts`
+  if (vendorTypes === null) files.set(stubPath, STUB)
   const options: ts.CompilerOptions = {
     target: ts.ScriptTarget.ES2023,
     lib: ['lib.es2023.d.ts'],
@@ -245,7 +252,7 @@ function buildProgram(vdir: string, files: Map<string, string>, vendorTypes: str
     return sf
   }
 
-  return ts.createProgram({ rootNames: [vendorTypes, ...files.keys()], options, host })
+  return ts.createProgram({ rootNames: [vendorTypes ?? stubPath, ...files.keys()].filter((f, i, a) => a.indexOf(f) === i), options, host })
 }
 
 // The part of save-store.ts after the marker line is the contributor's.
@@ -272,27 +279,28 @@ function checkRegister(file: string, got: string, want: string): string | null {
   return a.join('\n') === w.join('\n') ? null : 'differs from scaffold'
 }
 
-function checkPluginJson(got: string, want: string): { scaffold: string | null; author: boolean } {
+function checkPluginJson(got: string, want: string): { scaffold: string | null; author: boolean; todoDescription: boolean } {
   let g: Record<string, unknown>
   try {
     g = JSON.parse(got)
   } catch {
-    return { scaffold: 'not valid JSON', author: true }
+    return { scaffold: 'not valid JSON', author: true, todoDescription: false }
   }
-  if (!g || typeof g !== 'object' || Array.isArray(g)) return { scaffold: 'not an object', author: true }
+  if (!g || typeof g !== 'object' || Array.isArray(g)) return { scaffold: 'not an object', author: true, todoDescription: false }
   const { author, description, ...rest } = g
   const { author: _a, description: _d, ...wantRest } = JSON.parse(want) as Record<string, unknown>
   void _a
   void _d
   const name = author && typeof author === 'object' && !Array.isArray(author) ? (author as Record<string, unknown>).name : undefined
-  const authorOk = typeof name === 'string' && name.trim() !== ''
+  const placeholder = (x: unknown): boolean => typeof x === 'string' && /^(todo|<your name>)$/i.test(x.trim())
+  const authorOk = typeof name === 'string' && name.trim() !== '' && !placeholder(name)
   const authorShape = !!author && typeof author === 'object' && !Array.isArray(author) && Object.values(author).every(x => typeof x === 'string')
   let scaffold: string | null = null
   if (canon(rest) !== canon(wantRest)) scaffold = 'differs from scaffold outside description/author'
   else if (typeof description !== 'string') scaffold = 'description must be a string'
   else if (author !== undefined && !authorShape) scaffold = 'author fields must be strings'
 
-  return { scaffold, author: authorOk }
+  return { scaffold, author: authorOk, todoDescription: typeof description === 'string' && /^todo$/i.test(description.trim()) }
 }
 
 function checkMarketplace(id: string, baseText: string, headText: string): string | null {
@@ -314,6 +322,7 @@ function checkMarketplace(id: string, baseText: string, headText: string): strin
   if (!e || typeof e !== 'object') return 'new entry is not an object'
   if (e.name !== id) return `entry name must be ${id}`
   if (e.source !== `./plugins/${id}`) return `entry source must be ./plugins/${id}`
+  if (typeof e.description === 'string' && /^todo$/i.test(e.description.trim())) return 'entry description is still TODO'
   if (typeof e.description !== 'string' || e.description.length > 200) return 'entry description must be a string of at most 200 characters'
   const extra = Object.keys(e).filter(k => !['name', 'source', 'description'].includes(k))
   if (extra.length > 0) return `unexpected entry keys: ${extra.join(', ')}`
@@ -330,7 +339,7 @@ export function checkContribution(input: Input): Violation[] {
     if (p === MARKET) continue
     const m = /^plugins\/([^/]+)\/.+/.exec(p)
     const sane = !p.split('/').some(s => s === '' || s === '.' || s === '..') && !p.includes('\\')
-    if (!m || !sane || !ID.test(m[1]!)) out.push(v(p, 'one-plugin', 'outside plugins/<id>/'))
+    if (!m || !sane || !isId(m[1]!)) out.push(v(p, 'one-plugin', 'outside plugins/<id>/'))
     else ids.add(m[1]!)
   }
   if (ids.size > 1) out.push(v([...ids].join(', '), 'one-plugin', 'more than one plugin'))
@@ -376,7 +385,8 @@ export function checkContribution(input: Input): Violation[] {
     if (rel === '.claude-plugin/plugin.json') {
       const r = checkPluginJson(got, want ? want[file]! : '{}')
       if (want && r.scaffold) out.push(v(file, 'scaffold-equal', r.scaffold))
-      if (!r.author) out.push(v(file, 'author', 'author.name must be non-empty'))
+      if (!r.author) out.push(v(file, 'author', 'author.name must be a real name (not empty, TODO or <YOUR NAME>)'))
+      if (r.todoDescription) out.push(v(file, 'author', 'description is still TODO'))
       continue
     }
     if (!want) continue
@@ -417,20 +427,18 @@ export function checkContribution(input: Input): Violation[] {
   if (useTypes && !existsSync(vendor)) {
     throw new Error(`${vendor} is missing: the type layer needs the engine types (bash scripts/vendor-types.sh <path to claude-code.d.ts>), or pass --no-types to skip that layer and run the full check locally`)
   }
-  const program = useTypes ? buildProgram(vdir, files, vendor) : null
-  const checker = program?.getTypeChecker()
+  const program = buildProgram(vdir, files, useTypes ? vendor : null)
+  const checker = program.getTypeChecker()
   const typedFor = (rel: string): Typed | undefined => {
-    if (!program || !checker) return undefined
     const sf = program.getSourceFile(vdir + rel)
 
-    return sf ? { sf, program, checker, own: f => f.fileName.startsWith(vdir) } : undefined
+    return sf ? { sf, program, checker, semantic: useTypes, own: f => f.fileName.startsWith(vdir) } : undefined
   }
 
   if (regionStart >= 0) {
     const file = `${dir}hooks/save-store.ts`
     const t = typedFor('hooks/save-store.ts')
     if (t) out.push(...scanSource(file, t.sf.text, false, t, regionStart))
-    else if (!useTypes) out.push(...scanSource(file, tryRead(read, file) ?? '', false, undefined, regionStart))
   }
 
   // the bundle must carry exactly shared/'s files, changed or not
@@ -448,7 +456,6 @@ export function checkContribution(input: Input): Violation[] {
     if (HAND.has(rel) || TEST.test(rel)) {
       const t = typedFor(rel)
       if (t) out.push(...scanSource(p, t.sf.text, TEST.test(rel), t))
-      else if (!useTypes) out.push(...scanSource(p, tryRead(read, p) ?? '', TEST.test(rel)))
     } else if (SHARED.test(rel)) {
       if (!sharedExpected.includes(rel.slice('hooks/shared/'.length))) out.push(v(p, 'scaffold-equal', 'not in shared/'))
     } else if (DOCS.has(rel) || IMAGE.test(rel)) {
@@ -493,7 +500,7 @@ function main(): void {
   const violations = checkContribution({
     changed,
     read: p => readFileSync(resolve(root, p), 'utf8'),
-    baseMarketplace: git(root, ['show', `${baseRef}:${MARKET}`]),
+    baseMarketplace: git(root, ['show', `${git(root, ['merge-base', baseRef, 'HEAD']).trim()}:${MARKET}`]),
     headMarketplace: readFileSync(resolve(root, MARKET), 'utf8'),
     sharedFiles: readdirSync(sharedDir).filter(f => /\.tsx?$/.test(f)),
     types: !noTypes,
@@ -505,13 +512,16 @@ function main(): void {
     if (m && [m[1], m[2]].some(x => x === '120000' || x === '160000')) violations.push(v(m[3]!, 'import-allowlist', 'symlink or submodule'))
   }
 
-  if (noTypes) console.log('type layer skipped (--no-types): run the full check locally before merging')
+  if (noTypes) {
+    console.log('type layer skipped (--no-types): global-allowlist and index rules ran; type errors were not checked')
+    if (process.env.GITHUB_ACTIONS) console.log('::warning::type-error layer skipped; maintainer must run the full checker locally')
+  }
   for (const x of violations) console.log(`${x.file}: [${x.rule}] ${x.detail}`)
   if (violations.length > 0) {
     console.log(`\n${violations.length} violation(s)`)
     process.exit(1)
   }
-  console.log('contribution check: clean')
+  console.log(noTypes ? 'contribution check: clean (type errors not checked; run the full check locally before merging)' : 'contribution check: clean')
 }
 
 if (import.meta.main) main()

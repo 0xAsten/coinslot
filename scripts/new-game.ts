@@ -30,11 +30,11 @@ const FILES: Record<string, string> = {
   'types/index.d.ts': 'types.d.ts.tpl',
 }
 
-const ID = /^[a-z][a-z0-9-]{2,30}$/
+const ID = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/
 
 // Format only; the CLI also refuses an id that already exists.
 export function scaffoldFiles(id: string, title: string): Record<string, string> {
-  if (!ID.test(id)) throw new Error(`id must match ${ID}: ${id}`)
+  if (id.length < 3 || id.length > 31 || !ID.test(id)) throw new Error(`id must be 3-31 chars, lowercase letters, digits and single hyphens, starting with a letter: ${id}`)
   // the title lands inside single-quoted strings
   if (!title.trim() || /['\\\n\r]/.test(title)) throw new Error('title must be non-empty, without quotes, backslashes or newlines')
 
