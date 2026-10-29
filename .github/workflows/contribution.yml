@@ -7,30 +7,16 @@ on:
 permissions:
   contents: read
 
+# Screening a contributor's PR is a separate workflow (contribution-screen.yml,
+# pull_request_target) so it runs main's code. This one runs the PR's own tests.
 jobs:
-  screen:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
-      # Everything up to and including Screen runs main's code only: the checker,
-      # its bunfig.toml and its lockfile. Nothing from the PR is installed or executed
-      # until Screen has passed, and the PR is only ever read (--root).
-      - name: Check out main's checker
-        if: github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'COLLABORATOR'
-        run: git worktree add ../coinslot-base origin/main
-      - name: Install the checker (main's lockfile)
-        if: github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'COLLABORATOR'
-        working-directory: ../coinslot-base
-        run: bun install --frozen-lockfile
-      - name: Screen the contribution
-        if: github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'COLLABORATOR'
-        working-directory: ../coinslot-base
-        run: bun scripts/check-contribution.ts --root "$GITHUB_WORKSPACE" origin/main
       - run: bun install --frozen-lockfile
       - run: bun test site scripts
       - run: npx -y -p typescript@5.9.3 tsc -p site/tsconfig.json

@@ -86,8 +86,8 @@ export function step(state: Game, dt: number, input: Input = {}): Game {
   g.t += dt
   if (input.dir !== undefined) g.dir = input.dir
 
-  g.x = clamp(g.x + DX[g.dir]! * SPEED * dt, 0, g.w - 1)
-  g.y = clamp(g.y + DY[g.dir]! * SPEED * dt, TOP, g.h - 1)
+  g.x = clamp(g.x + DX[g.dir | 0]! * SPEED * dt, 0, g.w - 1)
+  g.y = clamp(g.y + DY[g.dir | 0]! * SPEED * dt, TOP, g.h - 1)
 
   for (const c of g.coins) c.life -= dt
   g.coins = g.coins.filter(c => c.life > 0)

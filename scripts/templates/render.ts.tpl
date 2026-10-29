@@ -34,7 +34,7 @@ export function renderCells(g: Game): Cells {
     const ix = Math.floor(x)
     const iy = Math.floor(y)
     if (ix < 0 || iy < 0 || ix >= g.w || iy >= g.h) return
-    buf[iy * g.w + ix] = c
+    buf[(iy * g.w + ix) | 0] = c
   }
   for (const c of g.coins) {
     // a bonus about to expire blinks out
@@ -52,23 +52,23 @@ export function renderCells(g: Game): Cells {
   for (let cy = 0; cy < rows; cy += 1) {
     for (let cx = 0; cx < cols; cx += 1) {
       const i = cy * cols + cx
-      fg[i] = buf[cy * 2 * cols + cx]!
-      bg[i] = buf[(cy * 2 + 1) * cols + cx]!
+      fg[i | 0] = buf[(cy * 2 * cols + cx) | 0]!
+      bg[i | 0] = buf[((cy * 2 + 1) * cols + cx) | 0]!
     }
   }
 
   // HUD row, painted over the top of the field.
   const left = ` SCORE ${g.score} `
   for (let x = 0; x < cols; x += 1) {
-    ch[x] = x < left.length ? left[x]! : ' '
-    fg[x] = COIN
-    bg[x] = HUD_BG
+    ch[x | 0] = x < left.length ? left[x | 0]! : ' '
+    fg[x | 0] = COIN
+    bg[x | 0] = HUD_BG
   }
   if (cols >= left.length + HINT.length + 2) {
     for (let k = 0; k < HINT.length; k += 1) {
       const x = cols - HINT.length - 1 + k
-      ch[x] = HINT[k]!
-      fg[x] = 0x8aa0d0
+      ch[x | 0] = HINT[k | 0]!
+      fg[x | 0] = 0x8aa0d0
     }
   }
 

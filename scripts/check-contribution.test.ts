@@ -50,7 +50,7 @@ function withFileAll(path: string, text: string): Violation[] {
   return run(files, head)
 }
 // The older tests pin the syntactic rules; the type-aware ones are pinned further down.
-const TYPE_RULES = new Set(['global-allowlist', 'no-any'])
+const TYPE_RULES = new Set(['global-allowlist', 'no-any', 'type-error'])
 const rulesAll = (v: Violation[]): string[] => [...new Set(v.map(x => x.rule))].sort()
 const rules = (v: Violation[]): string[] => rulesAll(v.filter(x => !TYPE_RULES.has(x.rule)))
 const withFile = (path: string, text: string): Violation[] => withFileAll(path, text).filter(x => !TYPE_RULES.has(x.rule))
@@ -198,13 +198,13 @@ test('no-dollar', () => {
 })
 
 test('no-bracket-dollar and computed access', () => {
-  expect(rules(withFile('hooks/game.tsx', "export const f = (x: any) => $['tool']\n"))).toEqual(['banned-token', 'no-bracket-dollar', 'no-dollar'])
+  expect(rules(withFile('hooks/game.tsx', "export const f = (x: any) => $['tool']\n"))).toEqual(['no-bracket-dollar', 'no-dollar'])
   expect(rules(sim("export const f = (x: any) => x['ev' + 'al']\n"))).toEqual(['banned-token'])
   expect(sim("export const f = (x: any) => x['ev' + 'al']\n")[0]!.detail).toBe('computed access')
   expect(rules(sim('export const f = (x: any) => x[`fetch`]\n'))).toEqual(['banned-token'])
-  expect(rules(sim("export const f = (x: any) => x?.['a']\n"))).toEqual(['banned-token'])
+  expect(rules(sim("export const f = (x: any) => x?.['a']\n"))).toEqual([])
   expect(rules(sim("export const f = (x: any) => ({ ['fe' + 'tch']: 1, ...x })\n"))).toEqual(['banned-token'])
-  expect(sim('export const f = (a: number[], i: number) => a[i + 1]\n')).toEqual([])
+  expect(sim('export const f = (a: number[], i: number) => a[(i + 1) | 0]\n')).toEqual([])
 })
 
 test('import-allowlist', () => {
@@ -309,7 +309,6 @@ test('reflection routes to Function are closed (probe: getOwnPropertyDescriptor)
   const v = simAll("export const F = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(() => 0), 'constructor')!.value\nexport const g = F('return this')()\n")
   expect(hit(v, 'global-allowlist', 'Object')).toBe(true)
   expect(hit(v, 'banned-token', 'banned property name constructor')).toBe(true)
-  expect(hit(v, 'no-any')).toBe(true)
 })
 
 test('reflection routes to Function are closed (probe: string-key destructure)', () => {
@@ -349,13 +348,64 @@ test('global-allowlist: free identifiers must be allowed globals or own/imported
   expect(hit(simAll('const Object = 1\nexport const a = { Object }\n'), 'global-allowlist')).toBe(false)
 })
 
-test('computed access: the index must be a number or a closed literal set', () => {
-  expect(simAll('export const a = (xs: number[], i: number) => xs[i] ?? xs[0]\n')).toEqual([])
-  expect(simAll("type K = 'a' | 'b'\nexport const a = (o: Record<K, number>, k: K) => o[k]\n")).toEqual([])
-  const s = simAll('export const a = (o: Record<string, number>, k: string) => o[k]\n')
-  expect(hit(s, 'banned-token', 'computed access')).toBe(true)
-  expect(hit(simAll("export const a = (o: Record<string, number>) => { const { [String(1)]: x } = o; return x }\n"), 'banned-token', 'computed access')).toBe(true)
-  expect(hit(simAll("type K = 'constructor' | 'b'\nexport const a = (o: Record<K, number>, k: K) => o[k]\n"), 'banned-token')).toBe(true)
+test('computed access: syntactic index rule', () => {
+  for (const ok of ['xs[0]', "o['name']", 'xs[+i]', 'xs[-i]', 'xs[~i]', 'xs[i | 0]', 'xs[(i * 2 + 1) | 0]', 'xs[i - 1]', 'xs[i ** 2]', 'xs[i >>> 1]', 'xs[Math.floor(i)]', 'xs[(Math.min(i, 3))]', 'xs[(+i)]']) {
+    expect(simAll(`export const a = (xs: any[], o: any, i: number) => ${ok}\n`).filter(x => x.rule === 'banned-token'), ok).toEqual([])
+  }
+  for (const bad of ['xs[i]', 'xs[o.k]', 'xs[`a`]', 'xs[i + 1]', 'xs[i ? 1 : 2]', 'xs[f(i)]', 'xs[i || 0]', 'xs[i ?? 0]', 'xs[(i, 1)]', 'xs[i = 1]', 'xs[!i]', 'xs[++i]', "xs['constructor']", "xs['__proto__']", "xs['pro' + 'to']", 'xs[Math2.floor(i)]', 'xs[g(Math)]']) {
+    const v = simAll(`declare const Math2: any\nexport const a = (xs: any[], o: any, i: number, f: (n: number) => number, g: (m: unknown) => number) => ${bad}\n`)
+    expect(hit(v, 'banned-token', 'computed access') || hit(v, 'banned-token', 'banned property name'), bad).toBe(true)
+  }
+  // Math shadowed by a local is not the lib Math
+  expect(hit(simAll('export const a = (xs: number[], Math: { floor(n: number): number }) => xs[Math.floor(1)]\n'), 'banned-token', 'computed access')).toBe(true)
+})
+
+test('computed property names are banned everywhere', () => {
+  for (const src of [
+    'export const a = (k: string) => ({ [k]: 1 })\n',
+    'export const a = (o: { x: number }, k: "x") => { const { [k]: v } = o; return v }\n',
+    'export class A { [Symbol.iterator]() { return 1 } }\n',
+    "export const a = { ['x']: 1 }\n",
+  ]) expect(hit(simAll(src), 'banned-token', 'computed access'), src).toBe(true)
+})
+
+test('round 2 probes: type-lies cannot open the index (probe: json-any literal key)', () => {
+  const v = simAll("const k: 'length' = JSON.parse('\"constructor\"')\nexport const F = (() => 0)[k]\n")
+  expect(hit(v, 'banned-token', 'computed access')).toBe(true)
+})
+
+test('round 2 probes: lying type predicate', () => {
+  const v = simAll("const isLen = (s: string): s is 'length' => s.length > 0\nconst k = 'con' + 'structor'\nexport const pwn = () => { if (isLen(k)) { const F = (() => 0)[k]; return F } }\n")
+  expect(hit(v, 'banned-token', 'computed access')).toBe(true)
+})
+
+test('round 2 probes: as-literal lie', () => {
+  const v = simAll("const k = ('con' + 'structor') as 'length'\nexport const F = (() => 0)[k]\n")
+  expect(hit(v, 'banned-token', 'computed access')).toBe(true)
+})
+
+test('import.meta is banned', () => {
+  expect(hit(simAll('export const a = import.meta\n'), 'banned-token', 'import.meta')).toBe(true)
+  expect(hit(simAll('export const a = import.meta.dir\n'), 'banned-token', 'import.meta')).toBe(true)
+})
+
+test('type suppression comments are banned, and type errors are violations', () => {
+  for (const c of ['@ts-ignore', '@ts-expect-error', '@ts-nocheck']) {
+    expect(hit(simAll(`// ${c}\nexport const z: number = 'x'\n`), 'banned-token', c), c).toBe(true)
+    expect(hit(simAll(`/* ${c} */\nexport const z = 1\n`), 'banned-token', c), c).toBe(true)
+  }
+  const v = simAll("export const z: number = 'x'\n")
+  expect(v.some(x => x.rule === 'type-error' && x.file.endsWith('/sim.ts') && x.detail.includes('TS2322'))).toBe(true)
+  // implicit any is no-any
+  expect(hit(simAll('export function g(o, k) { return o }\n'), 'no-any')).toBe(true)
+  // a type error in the parseSave region counts too, one above the marker does not exist to be judged
+  const { files, head } = fixture()
+  files[`${P}hooks/save-store.ts`] += "\nexport const bad: number = 'x'\n"
+  expect(run(files, head).some(x => x.rule === 'type-error')).toBe(true)
+})
+
+test('JSON results assigned to typed variables are fine', () => {
+  expect(simAll("export type G = { a: number }\nexport const clone = (g: G): G => JSON.parse(JSON.stringify(g)) as G\n")).toEqual([])
 })
 
 test('no-any', () => {

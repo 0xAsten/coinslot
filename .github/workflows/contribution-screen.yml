@@ -1,0 +1,43 @@
+name: contribution-screen
+
+# pull_request_target runs this file and the checker as they are on main, never the PR's.
+# The PR is checked out only to be read: nothing in pr/ is installed, built or executed.
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  screen:
+    # owner, members and collaborators are the author's side; everyone else is screened
+    if: github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'MEMBER' && github.event.pull_request.author_association != 'COLLABORATOR'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      # main's own lockfile, main's own checkout; the PR directory is not touched
+      - name: Install the checker's dependencies (main only)
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Make main's base commit visible to the PR checkout
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git -C pr fetch --no-tags "$GITHUB_WORKSPACE" "$BASE_SHA"
+      - name: Screen the contribution
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bun scripts/check-contribution.ts --root pr "$BASE_SHA"

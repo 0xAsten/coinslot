@@ -56,11 +56,6 @@ function tryRead(read: Input['read'], path: string): string | null {
   }
 }
 
-function hasStringLiteral(n: ts.Node): boolean {
-  if (ts.isStringLiteralLike(n) || ts.isTemplateExpression(n)) return true
-  return ts.forEachChild(n, hasStringLiteral) ?? false
-}
-
 function importOk(spec: string, isTest: boolean): boolean {
   if (spec === './sim' || spec === './render' || spec === 'claude-code') return true
   if (SHARED_IMPORT.test(spec)) return true
@@ -81,14 +76,28 @@ function typeOnlyExport(n: ts.ExportDeclaration): boolean {
   return !!c && ts.isNamedExports(c) && c.elements.length > 0 && c.elements.every(e => e.isTypeOnly)
 }
 
-export type Typed = { sf: ts.SourceFile; checker: ts.TypeChecker; own(sf: ts.SourceFile): boolean }
+export type Typed = { sf: ts.SourceFile; program: ts.Program; checker: ts.TypeChecker; own(sf: ts.SourceFile): boolean }
 
-// An index is safe when the compiler knows it is a number or one of a closed set of literal keys.
-const safeIndex = (t: ts.Type): boolean => {
-  if (t.isUnion()) return t.types.every(safeIndex)
-  if (t.isStringLiteral()) return !BANNED_PROPS.has(t.value)
+const SAFE_BINARY = new Set([
+  ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken, ts.SyntaxKind.PercentToken,
+  ts.SyntaxKind.BarToken, ts.SyntaxKind.AmpersandToken, ts.SyntaxKind.CaretToken, ts.SyntaxKind.LessThanLessThanToken,
+  ts.SyntaxKind.GreaterThanGreaterThanToken, ts.SyntaxKind.GreaterThanGreaterThanGreaterThanToken, ts.SyntaxKind.AsteriskAsteriskToken,
+])
 
-  return (t.flags & ts.TypeFlags.NumberLike) !== 0
+// Index safety is syntactic: types are unsound, so only forms that cannot yield a banned string count.
+function safeIndex(e: ts.Expression, typed?: Typed): boolean {
+  while (ts.isParenthesizedExpression(e)) e = e.expression
+  if (ts.isNumericLiteral(e)) return true
+  if (ts.isStringLiteral(e)) return !BANNED_PROPS.has(e.text)
+  if (ts.isPrefixUnaryExpression(e)) return e.operator === ts.SyntaxKind.PlusToken || e.operator === ts.SyntaxKind.MinusToken || e.operator === ts.SyntaxKind.TildeToken
+  if (ts.isBinaryExpression(e)) return SAFE_BINARY.has(e.operatorToken.kind)
+  if (ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression) && ts.isIdentifier(e.expression.expression) && e.expression.expression.text === 'Math' && typed) {
+    const decls = typed.checker.getSymbolAtLocation(e.expression.expression)?.declarations ?? []
+
+    return decls.length > 0 && decls.every(d => !typed.own(d.getSourceFile()))
+  }
+
+  return false
 }
 
 function inTypePosition(n: ts.Node): boolean {
@@ -121,11 +130,8 @@ function typedChecks(file: string, n: ts.Node, t: Typed, out: Violation[]): void
     const decls = sym?.declarations ?? []
     if (!decls.some(d => own(d.getSourceFile())) && !ALLOWED_GLOBALS.has(n.text)) out.push(v(file, 'global-allowlist', n.text))
   }
-  if (ts.isElementAccessExpression(n) && !safeIndex(checker.getTypeAtLocation(n.argumentExpression))) out.push(v(file, 'banned-token', 'computed access'))
-  if (ts.isComputedPropertyName(n) && !safeIndex(checker.getTypeAtLocation(n.expression))) out.push(v(file, 'banned-token', 'computed access'))
   if (n.kind === ts.SyntaxKind.AnyKeyword) out.push(v(file, 'no-any', 'any'))
   if ((ts.isAsExpression(n) || ts.isTypeAssertionExpression(n)) && n.type.kind === ts.SyntaxKind.UnknownKeyword) out.push(v(file, 'no-any', 'as unknown'))
-  if ((ts.isCallExpression(n) || ts.isElementAccessExpression(n)) && checker.getTypeAtLocation(n.expression).flags & ts.TypeFlags.Any) out.push(v(file, 'no-any', 'any-typed expression'))
   if (ts.canHaveModifiers(n) && ts.getModifiers(n)?.some(m => m.kind === ts.SyntaxKind.DeclareKeyword)) out.push(v(file, 'global-allowlist', 'declare'))
 }
 
@@ -138,6 +144,16 @@ export function scanSource(file: string, text: string, isTest: boolean, typed?: 
   const diags = (sf as unknown as { parseDiagnostics: ts.Diagnostic[] }).parseDiagnostics
   if (diags.length > 0) out.push(v(file, 'banned-token', 'syntax error'))
   if (sf.referencedFiles.length + sf.typeReferenceDirectives.length + sf.libReferenceDirectives.length > 0) out.push(v(file, 'global-allowlist', 'reference directive'))
+
+  const suppress = /@ts-(?:ignore|expect-error|nocheck)/.exec(text.slice(minPos))
+  if (suppress) out.push(v(file, 'banned-token', suppress[0]))
+  if (typed) {
+    for (const d of [...typed.program.getSyntacticDiagnostics(sf), ...typed.program.getSemanticDiagnostics(sf)]) {
+      if ((d.start ?? 0) < minPos) continue
+      const msg = ts.flattenDiagnosticMessageText(d.messageText, ' ')
+      out.push(v(file, d.code >= 7000 && d.code < 8000 ? 'no-any' : 'type-error', `TS${d.code}: ${msg}`))
+    }
+  }
 
   const checkSpec = (spec: string, typeOnly: boolean | null): void => {
     if (!importOk(spec, isTest)) out.push(v(file, 'import-allowlist', spec))
@@ -160,9 +176,11 @@ export function scanSource(file: string, text: string, isTest: boolean, typed?: 
       } else if (BANNED.has(name)) out.push(v(file, 'banned-token', name))
     } else if (ts.isElementAccessExpression(n)) {
       if (ts.isIdentifier(n.expression) && n.expression.text === '$') out.push(v(file, 'no-bracket-dollar', '$[...]'))
-      if (hasStringLiteral(n.argumentExpression)) out.push(v(file, 'banned-token', 'computed access'))
+      if (!safeIndex(n.argumentExpression, typed)) out.push(v(file, 'banned-token', 'computed access'))
     } else if (ts.isComputedPropertyName(n)) {
-      if (hasStringLiteral(n.expression)) out.push(v(file, 'banned-token', 'computed access'))
+      out.push(v(file, 'banned-token', 'computed access'))
+    } else if (ts.isMetaProperty(n) && n.keywordToken === ts.SyntaxKind.ImportKeyword) {
+      out.push(v(file, 'banned-token', 'import.meta'))
     } else if (ts.isCallExpression(n) && n.expression.kind === ts.SyntaxKind.ImportKeyword) {
       out.push(v(file, 'banned-token', 'import('))
     } else if (ts.isImportTypeNode(n)) {
@@ -391,7 +409,7 @@ export function checkContribution(input: Input): Violation[] {
   const typedFor = (rel: string): Typed | undefined => {
     const sf = program.getSourceFile(vdir + rel)
 
-    return sf ? { sf, checker, own: f => f.fileName.startsWith(vdir) } : undefined
+    return sf ? { sf, program, checker, own: f => f.fileName.startsWith(vdir) } : undefined
   }
 
   if (regionStart >= 0) {
