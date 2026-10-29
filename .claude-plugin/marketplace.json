@@ -34,6 +34,11 @@
       "name": "jump-runner",
       "source": "./plugins/jump-runner",
       "description": "An original endless runner for Claude Code. Jump over crates and under drones as the pace climbs. Pauses when Claude finishes; Claude's tool calls drop glowing coins."
+    },
+    {
+      "name": "ci-smoke-bad",
+      "source": "./plugins/ci-smoke-bad",
+      "description": "An original coin-collecting arcade game for Claude Code. Steer a dot to gather coins before time runs out."
     }
   ]
 }

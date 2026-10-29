@@ -1,0 +1,9 @@
+{
+  "name": "ci-smoke-bad",
+  "version": "0.1.0",
+  "description": "An original arcade collect-and-steer game for Claude Code. Steer a dot to gather coins before time runs out. Pauses when Claude finishes; Claude's tool calls drop bonus coins.",
+  "author": {
+    "name": "Smoke Test"
+  },
+  "license": "MIT"
+}
