@@ -75,13 +75,15 @@ export function decodeLoop(bytes: Uint8Array): Loop {
     throw new LoopFormatError('bad header')
   }
   if (
-    !h || !Number.isInteger(h.cols) || !Number.isInteger(h.rows) || h.cols < 0 || h.rows < 0 ||
-    typeof h.fps !== 'number' || !Number.isInteger(h.frames) || h.frames < 0 ||
+    !h || !Number.isInteger(h.cols) || !Number.isInteger(h.rows) || h.cols < 1 || h.rows < 1 ||
+    typeof h.fps !== 'number' || !Number.isFinite(h.fps) || h.fps <= 0 ||
+    !Number.isInteger(h.frames) || h.frames < 1 ||
     !isNumArray(h.palette) || !Array.isArray(h.glyphs) || !h.glyphs.every((g) => typeof g === 'string')
   ) {
     throw new LoopFormatError('bad header')
   }
   const n = h.cols * h.rows
+  if (n > 65536) throw new LoopFormatError('too many cells')
   let off = 8 + headerLen
   const need = (len: number) => {
     if (off + len > bytes.length) throw new LoopFormatError('truncated buffer')
@@ -108,5 +110,6 @@ export function decodeLoop(bytes: Uint8Array): Loop {
     }
     frames.push(cur)
   }
+  if (off !== bytes.length) throw new LoopFormatError('trailing bytes')
   return { cols: h.cols, rows: h.rows, fps: h.fps, frames }
 }

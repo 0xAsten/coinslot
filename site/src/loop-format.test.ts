@@ -52,3 +52,59 @@ test('rejects an out-of-range cellIndex', () => {
   dv.setUint16(8 + headerLen + 2, l.cols * l.rows, true)
   expect(() => decodeLoop(bytes)).toThrow(LoopFormatError)
 })
+
+function withHeader(bytes: Uint8Array, mutate: (h: Record<string, unknown>) => void): Uint8Array {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset)
+  const hl = dv.getUint32(4, true)
+  const h = JSON.parse(new TextDecoder().decode(bytes.subarray(8, 8 + hl)))
+  mutate(h)
+  const hb = new TextEncoder().encode(JSON.stringify(h))
+  const rest = bytes.subarray(8 + hl)
+  const out = new Uint8Array(8 + hb.length + rest.length)
+  out.set(bytes.subarray(0, 4), 0)
+  new DataView(out.buffer).setUint32(4, hb.length, true)
+  out.set(hb, 8)
+  out.set(rest, 8 + hb.length)
+  return out
+}
+
+test('rejects invalid header JSON', () => {
+  const b = new Uint8Array(12)
+  b.set(new TextEncoder().encode('CSL1'), 0)
+  new DataView(b.buffer).setUint32(4, 4, true)
+  b.set(new TextEncoder().encode('nope'), 8)
+  expect(() => decodeLoop(b)).toThrow(LoopFormatError)
+})
+
+test('rejects a wrong-typed header field', () => {
+  const b = withHeader(encodeLoop(threeFrames()), (h) => { h.fps = 'fast' })
+  expect(() => decodeLoop(b)).toThrow(LoopFormatError)
+})
+
+test('rejects an out-of-range glyph index', () => {
+  const b = encodeLoop(threeFrames())
+  const dv = new DataView(b.buffer, b.byteOffset)
+  dv.setUint16(8 + dv.getUint32(4, true) + 2 + 2, 999, true)
+  expect(() => decodeLoop(b)).toThrow(LoopFormatError)
+})
+
+test('rejects an out-of-range palette index', () => {
+  const b = encodeLoop(threeFrames())
+  const dv = new DataView(b.buffer, b.byteOffset)
+  dv.setUint16(8 + dv.getUint32(4, true) + 2 + 4, 999, true)
+  expect(() => decodeLoop(b)).toThrow(LoopFormatError)
+})
+
+test('rejects trailing bytes', () => {
+  const b = encodeLoop(threeFrames())
+  const x = new Uint8Array(b.length + 1)
+  x.set(b)
+  expect(() => decodeLoop(x)).toThrow(LoopFormatError)
+})
+
+test('rejects huge dimensions', () => {
+  for (const [cols, rows] of [[65535, 65535], [1e9, 1]]) {
+    const b = withHeader(encodeLoop(threeFrames()), (h) => { h.cols = cols; h.rows = rows })
+    expect(() => decodeLoop(b)).toThrow(LoopFormatError)
+  }
+})
