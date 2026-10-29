@@ -3,3 +3,4 @@ vendor/
 plugins/*/.claude-plugin/types/
 .superpowers/
 site/dist/
+docs/superpowers/
