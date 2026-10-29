@@ -234,21 +234,33 @@ function flickStick(dir: Dir): void {
 }
 
 // sound
-const wake = () => audio.unlock()
 const SOUND_EVENTS = ['pointerdown', 'keydown', 'click', 'touchend']
+// the ♪ button handles its own first press (below), so these skip it
+const fromMute = (e: Event): boolean => e.target instanceof Node && muteBtn.contains(e.target)
+const wake = (e: Event): void => {
+  if (!fromMute(e)) audio.unlock()
+}
 for (const ev of SOUND_EVENTS) window.addEventListener(ev, wake, { passive: true })
 // the browser keeps the page silent until a first gesture: nudge the ♪ button till then
 muteBtn.classList.add('hint')
-const settle = (): void => {
+const stopHint = (): void => {
   muteBtn.classList.remove('hint')
   for (const ev of SOUND_EVENTS) window.removeEventListener(ev, settle)
 }
+const settle = (e: Event): void => {
+  if (!fromMute(e)) stopHint()
+}
 for (const ev of SOUND_EVENTS) window.addEventListener(ev, settle, { passive: true })
 muteBtn.addEventListener('click', e => {
+  // while the hint shows, nothing has played yet: the first press starts the music, it does not mute it
+  const first = muteBtn.classList.contains('hint')
   audio.unlock()
-  audio.setMuted(!audio.muted())
-  muteBtn.classList.toggle('off', audio.muted())
-  muteBtn.setAttribute('aria-pressed', String(audio.muted()))
+  if (first) stopHint()
+  else {
+    audio.setMuted(!audio.muted())
+    muteBtn.classList.toggle('off', audio.muted())
+    muteBtn.setAttribute('aria-pressed', String(audio.muted()))
+  }
   if (e.detail > 0) muteBtn.blur()
 })
 
