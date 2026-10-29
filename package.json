@@ -9,7 +9,8 @@
     "check": "bun scripts/check.ts",
     "new-game": "bun scripts/new-game.ts",
     "test:site": "bun test site scripts",
-    "build:site": "bun scripts/build-site.ts"
+    "build:site": "bun scripts/build-site.ts",
+    "deploy:site": "bun scripts/build-site.ts --deploy && cd site && npx wrangler deploy"
   },
   "devDependencies": {
     "@types/bun": "1.3.14",
