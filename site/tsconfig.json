@@ -10,5 +10,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src", "bots", "../scripts/record-loops.ts", "../scripts/build-site.ts"]
+  "include": ["src", "../scripts/record-loops.ts", "../scripts/build-site.ts"]
 }

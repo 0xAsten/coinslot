@@ -1,8 +1,13 @@
 import { describe, expect, test } from 'bun:test'
-import { readFileSync } from 'node:fs'
-import { GAMES } from '../site/bots'
+import { mkdtempSync, readFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { loadGames, readGameMetas } from './games'
 import { encodeLoop } from '../site/src/loop-format'
 import { recordLoop } from './record-loops'
+
+const root = resolve(import.meta.dir, '..')
+const GAMES = await loadGames(root)
 
 describe('recordLoop', () => {
   test('records 300 frames of 56×28', () => {
@@ -37,5 +42,13 @@ describe('recordLoop', () => {
 
   test('mask matches the shell', () => {
     expect(readFileSync('shared/shell.tsx', 'utf8')).toContain('const COLOR_MASK = 0xe0e0e0')
+  })
+
+  test('writes games.json', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'coinslot-rec-'))
+    const out = join(tmp, 'loops')
+    const p = Bun.spawnSync(['bun', join(root, 'scripts/record-loops.ts'), out], { cwd: root })
+    expect(p.exitCode).toBe(0)
+    expect(JSON.parse(readFileSync(join(tmp, 'games.json'), 'utf8'))).toEqual(readGameMetas(root))
   })
 })

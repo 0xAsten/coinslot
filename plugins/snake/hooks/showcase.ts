@@ -1,7 +1,7 @@
-import { DX, DY, type Game, type Input } from '../../plugins/snake/hooks/sim'
+import { DX, DY, type Game, type Input } from './sim'
 
 // Greedy toward the food among the safe non-reversing turns.
-export function bot(g: Game): Input {
+function bot(g: Game): Input {
   const head = g.snake[0]
   if (g.over || !head) return { any: g.over }
   const body = g.snake.slice(0, -1)
@@ -21,4 +21,13 @@ export function bot(g: Game): Input {
   }
 
   return { turns: best !== g.dir ? [best] : [], any: false }
+}
+
+// What the showcase recorder needs: a fixed seed, a warmup, the bot, and two gauges.
+export const SHOWCASE = {
+  seed: 8,
+  warmupS: 1,
+  bot,
+  progress: (g: Game): number => g.score,
+  over: (g: Game): boolean => g.over,
 }

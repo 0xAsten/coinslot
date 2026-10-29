@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import type { Cells } from '../shared/cells'
-import { GAMES, type GameEntry } from '../site/bots'
+import { loadGames, type GameEntry } from './games'
 import { encodeLoop, type Loop } from '../site/src/loop-format'
 
 // mirrors shared/shell.tsx (guarded by a test)
@@ -32,7 +32,9 @@ if (import.meta.main) {
     process.exit(1)
   }
   mkdirSync(out, { recursive: true })
-  for (const e of GAMES) {
+  const games = await loadGames(resolve(import.meta.dir, '..'))
+  writeFileSync(join(out, '..', 'games.json'), JSON.stringify(games.map(({ id, name, author }) => ({ id, name, author }))))
+  for (const e of games) {
     const loop = recordLoop(e)
     const bytes = Bun.gzipSync(new Uint8Array(encodeLoop(loop)))
     writeFileSync(join(out, `${e.id}.bin`), bytes)
