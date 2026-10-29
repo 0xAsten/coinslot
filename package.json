@@ -6,6 +6,10 @@
   "description": "Original terminal mini-games, each a Claude Code mod.",
   "scripts": {
     "bundle": "bun scripts/bundle-shared.ts",
-    "check": "bun scripts/check.ts"
+    "check": "bun scripts/check.ts",
+    "test:site": "bun test site scripts"
+  },
+  "devDependencies": {
+    "@types/bun": "1.3.14"
   }
 }

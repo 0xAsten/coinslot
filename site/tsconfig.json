@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "lib": ["es2023", "dom"],
+    "types": ["bun"],
+    "target": "es2023",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src", "bots", "../scripts/record-loops.ts", "../scripts/build-site.ts"]
+}
