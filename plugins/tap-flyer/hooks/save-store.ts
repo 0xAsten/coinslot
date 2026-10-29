@@ -29,6 +29,7 @@ export function readDebug($: Parameters<typeof read>[0]): Promise<boolean | null
   return read($, debug)
 }
 
+// --- parseSave: game-specific below ---
 const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v)
 
 // The shell's envelope { v, g } around the whole run; anything without a field
