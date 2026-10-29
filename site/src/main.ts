@@ -194,19 +194,26 @@ muteBtn.addEventListener('click', () => {
 })
 
 const ARROWS: Record<string, Dir> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
+const onControl = () => !!document.activeElement?.closest('a, button')
+const wallInView = () => {
+  const r = wall.getBoundingClientRect()
+  const vis = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)
+  return vis >= r.height / 2
+}
+
 window.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return
   if (e.key === 'Escape' && zoomed >= 0) {
     unzoom()
     return
   }
-  if (e.key === 'Enter' && zoomed < 0 && document.activeElement === document.body) {
+  if (e.key === 'Enter' && zoomed < 0 && !onControl()) {
     e.preventDefault()
     zoom(sel)
     return
   }
   const dir = ARROWS[e.key]
-  if (!dir || zoomed >= 0) return
+  if (!dir || zoomed >= 0 || onControl() || !wallInView()) return
   e.preventDefault()
   flickStick(dir)
   select(moveSel(sel, dir, cols()))

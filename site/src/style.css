@@ -10,28 +10,25 @@ body { overflow-x: hidden; }
 @media (max-width: 640px) { #grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(3, 1fr); } }
 
 .cell { position: relative; min-width: 0; min-height: 0; }
-.tile { position: absolute; inset: 0; overflow: hidden; border-radius: 12px; background: #0b121d; cursor: pointer; filter: brightness(.88) saturate(.9); transition: filter .18s, box-shadow .18s; outline: none; }
+.tile { position: absolute; inset: 0; overflow: hidden; border-radius: 12px; background: #0b121d; cursor: pointer; filter: brightness(.88) saturate(.9); outline: none; }
 .tile canvas { display: block; width: 100%; height: 100%; }
 .tile .name { position: absolute; left: 10px; bottom: 8px; font: 700 15px var(--mono); letter-spacing: 1px; color: #fff; text-shadow: 0 2px 0 #000; pointer-events: none; }
 .tile.on { filter: none; box-shadow: 0 0 0 2px #ffd61f; }
 
-.tile.big { z-index: 4; cursor: default; filter: none; box-shadow: 0 0 0 3px #ffd61f, 0 0 44px rgba(255,214,31,.5); transition: top .5s cubic-bezier(.2,.8,.2,1), left .5s cubic-bezier(.2,.8,.2,1), right .5s cubic-bezier(.2,.8,.2,1), bottom .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s; }
-.tile.big.nomotion { transition: none; }
+.tile.big { z-index: 4; cursor: default; filter: none; box-shadow: 0 0 0 3px #ffd61f, 0 0 44px rgba(255,214,31,.5); }
 
-.cmd { position: absolute; left: 50%; top: 50%; max-width: 90%; transform: translate(-50%, -50%); padding: 10px 16px; border: 0; border-radius: 10px; background: #ffd61f; color: #111; font: 600 14px var(--mono); text-align: center; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s; }
-.tile.big .cmd { opacity: 1; pointer-events: auto; transition: opacity .2s .45s; }
-.cmd.done { background: #16c79a; color: #fff; animation: pop .35s; }
-@keyframes pop { 0% { scale: 1 } 40% { scale: 1.18 } 100% { scale: 1 } }
+.cmd { position: absolute; left: 50%; top: 50%; max-width: 90%; transform: translate(-50%, -50%); padding: 10px 16px; border: 0; border-radius: 10px; background: #ffd61f; color: #111; font: 600 14px var(--mono); text-align: center; cursor: pointer; opacity: 0; visibility: hidden; }
+.tile.big .cmd { opacity: 1; visibility: visible; }
+.cmd.done { background: #16c79a; color: #fff; }
 
-.coin { position: absolute; z-index: 6; font: 700 16px var(--mono); color: #ffd61f; text-shadow: 0 2px 0 #000; pointer-events: none; animation: rise .9s ease-out forwards; }
-@keyframes rise { to { transform: translateY(-60px); opacity: 0; } }
+.coin { position: absolute; z-index: 6; font: 700 16px var(--mono); color: #ffd61f; text-shadow: 0 2px 0 #000; pointer-events: none; }
 
 #mute { position: absolute; right: 22px; top: 20px; z-index: 8; font: 700 16px var(--mono); color: #ffd61f; background: rgba(0,0,0,.45); border: 0; border-radius: 8px; padding: 4px 9px; cursor: pointer; }
 #mute.off { opacity: .5; text-decoration: line-through; }
 
 #stick { position: absolute; left: 50%; bottom: 22px; width: 96px; height: 96px; margin-left: -48px; z-index: 5; pointer-events: none; }
 #base { position: absolute; inset: 18px 6px 0 6px; border-radius: 50% / 40%; background: radial-gradient(ellipse at 50% 35%, #3a3f4a, #15181e); box-shadow: 0 8px 18px rgba(0,0,0,.6); }
-#shaft { position: absolute; left: 44px; top: 20px; width: 8px; height: 46px; background: linear-gradient(90deg, #999, #eee, #888); border-radius: 4px; transform-origin: 50% 100%; transition: transform .08s; }
+#shaft { position: absolute; left: 44px; top: 20px; width: 8px; height: 46px; background: linear-gradient(90deg, #999, #eee, #888); border-radius: 4px; transform-origin: 50% 100%; }
 #ball { position: absolute; left: -12px; top: -22px; width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff8a8a, #e8213c 55%, #8a0f1e); box-shadow: 0 4px 8px rgba(0,0,0,.5); }
 @media (hover: none) { #stick { display: none; } }
 
@@ -42,4 +39,15 @@ body { overflow-x: hidden; }
 #about .links { display: flex; gap: 22px; font-size: 15px; }
 #about a { color: #ffd61f; }
 
-@media (prefers-reduced-motion: reduce) { .tile.big, .tile.big .cmd, #shaft { transition: none; } .coin { animation-duration: .01s; } }
+@media (prefers-reduced-motion: no-preference) {
+  .tile { transition: filter .18s, box-shadow .18s; }
+  .tile.big { transition: top .5s cubic-bezier(.2,.8,.2,1), left .5s cubic-bezier(.2,.8,.2,1), right .5s cubic-bezier(.2,.8,.2,1), bottom .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s; }
+  .tile.big.nomotion { transition: none; }
+  .cmd { transition: opacity .2s, visibility 0s .2s; }
+  .tile.big .cmd { transition: opacity .2s .45s, visibility 0s .45s; }
+  .cmd.done { animation: pop .35s; }
+  .coin { animation: rise .9s ease-out forwards; }
+  #shaft { transition: transform .08s; }
+}
+@keyframes pop { 0% { scale: 1 } 40% { scale: 1.18 } 100% { scale: 1 } }
+@keyframes rise { to { transform: translateY(-60px); opacity: 0; } }
