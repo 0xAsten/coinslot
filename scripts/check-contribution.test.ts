@@ -1,11 +1,15 @@
 import { expect, test } from 'bun:test'
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { checkContribution, type Violation } from './check-contribution'
 import { MARKER, scaffoldFiles } from './new-game'
 
 const root = resolve(import.meta.dir, '..')
 const baseMarketplace = readFileSync(join(root, '.claude-plugin', 'marketplace.json'), 'utf8')
+// The engine types are not in the repo: without them the tests run the --no-types path.
+const hasVendor = existsSync(join(root, 'vendor', 'claude-code.d.ts'))
+// cases that need the type layer
+const typed = test.skipIf(!hasVendor)
 const ID = 'demo-game'
 const P = `plugins/${ID}/`
 
@@ -32,6 +36,7 @@ function fixture(): { files: Record<string, string>; head: string } {
 
 function run(files: Record<string, string>, head: string, extraChanged: string[] = [], opts: { types?: boolean; vendorTypes?: string } = {}): Violation[] {
   return checkContribution({
+    types: hasVendor,
     ...opts,
     changed: [...Object.keys(files), ...extraChanged, '.claude-plugin/marketplace.json'],
     read: p => {
@@ -306,7 +311,7 @@ test('reflection routes to Function are closed (probe: variable key)', () => {
   expect(hit(v, 'banned-token', 'banned property name')).toBe(false)
 })
 
-test('reflection routes to Function are closed (probe: getOwnPropertyDescriptor)', () => {
+typed('reflection routes to Function are closed (probe: getOwnPropertyDescriptor)', () => {
   const v = simAll("export const F = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(() => 0), 'constructor')!.value\nexport const g = F('return this')()\n")
   expect(hit(v, 'global-allowlist', 'Object')).toBe(true)
   expect(hit(v, 'banned-token', 'banned property name constructor')).toBe(true)
@@ -318,7 +323,7 @@ test('reflection routes to Function are closed (probe: string-key destructure)',
   expect(hit(v, 'no-any', 'any')).toBe(true)
 })
 
-test('reflection routes to Function are closed (probe: Object.entries scan)', () => {
+typed('reflection routes to Function are closed (probe: Object.entries scan)', () => {
   const v = simAll('const fn: any = () => 0\nexport const F = Object.entries(Object.getOwnPropertyDescriptors(Object.getPrototypeOf(fn))).find(([n]) => n.length === 11)![1].value\n')
   expect(hit(v, 'global-allowlist', 'Object')).toBe(true)
   expect(hit(v, 'no-any')).toBe(true)
@@ -334,7 +339,7 @@ test('reflection routes to Function are closed (probe: inside the parseSave regi
   expect(run(fixture().files, head)).toEqual([])
 })
 
-test('global-allowlist: free identifiers must be allowed globals or own/imported', () => {
+typed('global-allowlist: free identifiers must be allowed globals or own/imported', () => {
   for (const g of ['Object', 'Reflect', 'Proxy', 'Symbol', 'Date', 'Promise']) {
     expect(hit(simAll(`export const a = ${g}\n`), 'global-allowlist', g), g).toBe(true)
   }
@@ -349,7 +354,7 @@ test('global-allowlist: free identifiers must be allowed globals or own/imported
   expect(hit(simAll('const Object = 1\nexport const a = { Object }\n'), 'global-allowlist')).toBe(false)
 })
 
-test('computed access: syntactic index rule', () => {
+typed('computed access: syntactic index rule', () => {
   for (const ok of ['xs[0]', "o['name']", 'xs[+i]', 'xs[-i]', 'xs[~i]', 'xs[i | 0]', 'xs[(i * 2 + 1) | 0]', 'xs[i - 1]', 'xs[i ** 2]', 'xs[i >>> 1]', 'xs[Math.floor(i)]', 'xs[(Math.min(i, 3))]', 'xs[(+i)]']) {
     expect(simAll(`export const a = (xs: any[], o: any, i: number) => ${ok}\n`).filter(x => x.rule === 'banned-token'), ok).toEqual([])
   }
@@ -390,7 +395,7 @@ test('import.meta is banned', () => {
   expect(hit(simAll('export const a = import.meta.dir\n'), 'banned-token', 'import.meta')).toBe(true)
 })
 
-test('type suppression comments are banned, and type errors are violations', () => {
+typed('type suppression comments are banned, and type errors are violations', () => {
   for (const c of ['@ts-ignore', '@ts-expect-error', '@ts-nocheck']) {
     expect(hit(simAll(`// ${c}\nexport const z: number = 'x'\n`), 'banned-token', c), c).toBe(true)
     expect(hit(simAll(`/* ${c} */\nexport const z = 1\n`), 'banned-token', c), c).toBe(true)
@@ -480,5 +485,5 @@ test('--no-types: syntactic rules still run without the type layer', () => {
 
 test('without --no-types a missing vendor file is a hard error', () => {
   const { files, head } = fixture()
-  expect(() => run(files, head, [], { vendorTypes: '/nonexistent/claude-code.d.ts' })).toThrow('vendor-types.sh')
+  expect(() => run(files, head, [], { types: true, vendorTypes: '/nonexistent/claude-code.d.ts' })).toThrow('vendor-types.sh')
 })

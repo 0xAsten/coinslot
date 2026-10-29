@@ -18,7 +18,7 @@ git switch -c game/<id> upstream/main
 bun install
 ```
 
-Get the engine types (needed by `bun run check` and the full checker). They are Anthropic's file and are never committed: `vendor/` is gitignored, so never `git add` it. In Claude Code the file ships with the built-in plugin-authoring skill as `types/claude-code.d.ts`. The bundled-skill path varies by Claude Code version: search for `claude-code.d.ts` under your Claude Code install and skills directories, or ask your harness where the plugin-authoring skill lives. Then:
+Get the engine types (needed by `bun run check` and the full checker). They are Anthropic's file and are never committed: `vendor/` is gitignored, so never `git add` it. In Claude Code the file ships with the built-in plugin-authoring skill as `types/claude-code.d.ts`. Several identical copies may exist under the bundled skills, one per version; any copy named `claude-code.d.ts` from the plugin-authoring skill works (pick the newest version directory). The path varies by Claude Code version: search for `claude-code.d.ts` under your Claude Code install and skills directories, or ask your harness where the plugin-authoring skill lives. Then:
 
 ```bash
 bash scripts/vendor-types.sh <path to claude-code.d.ts>
@@ -78,12 +78,17 @@ GameSpec<G, I> = {
 Rules:
 
 - **Pure and seeded.** No `Date`, no `Math.random`, no clock, no I/O. Keep the RNG seed inside the state (see `rand` in the scaffold's `sim.ts`, mulberry32). Same seed and same inputs give the same run.
-- **State is plain JSON** (numbers, strings, booleans, arrays, plain objects, `null`). No `Infinity` (use a big number like `1e9`), no `undefined` fields, no class instances, no `Map`/`Set` inside the state.
+- **State is plain JSON** (numbers, strings, booleans, arrays, plain objects, `null`). No `Infinity` or `NaN` in the state, even though both are allowed as globals in code (JSON turns them into `null`); use a big number like `1e9`, no `undefined` fields, no class instances, no `Map`/`Set` inside the state.
 - **The field is in pixels.** `w = cols`, `h = rows * 2` (each terminal cell shows two half-block pixels). The shell runs at a minimum of 40 columns by 10 rows, so your game must work from `w = 40`, `h = 20` upward and survive `resize` to any size at or above that.
 - **No hold-to-press mechanics.** The terminal delivers key presses, not key releases. Design for taps (a tap sets a direction, jumps, fires) not for holding a key down.
 - **Bonus.** `bonus(g)` is called each time Claude makes a tool call. Make it a reward (extra ball, power-up, golden target), capped so spamming it cannot break the game. The scaffold caps live bonuses at two.
 - **Show the outcome.** The player must see score or progress and what to do (see `hint` and `render.ts`'s HUD).
 - Only `render.ts` produces `Cells` (`{ cols, rows, ch, fg, bg }`, `rows = floor(h / 2)`). Colors are `0xRRGGBB` numbers.
+
+### Input and round end
+
+- `step` receives an `Input` built fresh each frame: the shell resets it to `noInput()` after every step, so `key`/`pointer` handlers should set one-shot flags or a last-direction field, not rely on a value persisting (the scaffold keeps `dir` in the game state, not in `Input`).
+- The shell has no game-over screen and never restarts a run. Your game owns its round end: set a flag such as `over` in the state, draw the message in `render.ts`, and restart on a key or click in `step`. `plugins/snake/hooks/sim.ts` (`over`, `overT`, restart after a delay on any key) is the pattern.
 
 ### Required exports
 
@@ -116,7 +121,7 @@ Originality:
 Safety (the checker enforces these; treat them as "never"):
 
 - Never use the network, filesystem, process, environment, DOM or timers. Banned identifiers (anywhere in your code, including as property names): `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `eval`, `Function` (except as a type annotation), `globalThis`, `global`, `self`, `window`, `document`, `navigator`, `localStorage`, `process`, `Bun`, `Deno`, `require`, `atob`, `fromCharCode`, `fromCodePoint`, `Reflect`, `WebAssembly`, `Worker`, `importScripts`, `constructor`, `prototype`, `__proto__`, `__defineGetter__`, `__defineSetter__`, `__lookupGetter__`, `__lookupSetter__`. No `import.meta`, no `import(...)`, no `require(...)`, no unicode escapes in identifiers.
-- Never use the `$` identifier or `$[...]` (the host handle). Only the shell touches it.
+- Never use the `$` identifier or `$[...]` (the host handle) in the files and regions you write. Only the scaffold touches it: the generated parts of `link-apply.ts` and `save-store.ts` contain `$` parameters and must stay byte-for-byte as generated.
 - Never reach outside this global allowlist: `Math`, `Number`, `Array`, `String`, `Boolean`, `Infinity`, `NaN`, `undefined`, `isFinite`, `isNaN`, `parseInt`, `parseFloat`, `JSON`, `Set`, `Map`, `Uint8Array`, `Uint16Array`, `Uint32Array`, `Int32Array`, `Float32Array`, `Float64Array`. Any other free identifier that is not declared in your own files is a violation. Do not use `declare`.
 - Never import anything except: `./sim`, `./render`, `./shared/cells`, `./shared/envelope`, `./shared/overlay`, `./shared/shell`, `./shared/link`, and `claude-code`. Imports from `claude-code` must be **type-only** (`import type { ... } from 'claude-code'`). Tests may also import `claude-code/testing`.
 - Never use `any` (including `as unknown`), `@ts-ignore`, `@ts-expect-error`, `@ts-nocheck`, or `/// <reference>` directives. Your code must have zero TypeScript errors (strict, `noUncheckedIndexedAccess`).
