@@ -1,14 +1,19 @@
 export type Dir = 'up' | 'down' | 'left' | 'right'
 
-// 6 tiles, row-major; moves wrap inside the row or column
-export function moveSel(sel: number, dir: Dir, cols: 2 | 3): number {
-  const rows = 6 / cols
+// row-major over `count` tiles; moves wrap inside the row or column (the last row may be short)
+export function moveSel(sel: number, dir: Dir, cols: 2 | 3, count: number): number {
+  const rows = Math.ceil(count / cols)
   const r = Math.floor(sel / cols)
   const c = sel % cols
-  if (dir === 'left') return r * cols + ((c + cols - 1) % cols)
-  if (dir === 'right') return r * cols + ((c + 1) % cols)
-  if (dir === 'up') return ((r + rows - 1) % rows) * cols + c
-  return ((r + 1) % rows) * cols + c
+  if (dir === 'left' || dir === 'right') {
+    const len = Math.min(cols, count - r * cols)
+    return r * cols + ((c + len + (dir === 'right' ? 1 : -1)) % len)
+  }
+  const step = dir === 'down' ? 1 : rows - 1
+  let nr = r
+  do nr = (nr + step) % rows
+  while (nr * cols + c >= count)
+  return nr * cols + c
 }
 
 const MAX_PULL = 160

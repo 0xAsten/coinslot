@@ -1,6 +1,7 @@
 import { createAudio } from './audio'
 import { copyCommand } from './copy'
-import { installCommand, PAGE_GAMES } from './games'
+import { byline } from './byline'
+import { installCommand } from './install'
 import { loadTile, TilePlayer } from './player'
 import { moveSel, stickAngle, type Dir } from './wall-logic'
 
@@ -12,11 +13,13 @@ const stick = document.getElementById('stick') as HTMLElement
 const muteBtn = document.getElementById('mute') as HTMLButtonElement
 
 type Tile = { cell: HTMLElement; tile: HTMLElement; cmd: HTMLButtonElement; code: HTMLElement; timer: number }
+type GameMeta = { id: string; name: string; author: string }
 const tiles: Tile[] = []
 let sel = 0
 let zoomed = -1
 
 const narrow = () => matchMedia('(max-width: 640px)').matches
+const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const cols = (): 2 | 3 => (narrow() ? 2 : 3)
 
 function execCopy(text: string): boolean {
@@ -54,17 +57,18 @@ function select(i: number, quiet = false): void {
   if (!quiet) audio.sfx('move')
 }
 
-// inset of the wall's content box relative to the cell, so the tile can grow over the wall
-function fitInsets(t: Tile): void {
-  const w = wall.getBoundingClientRect()
+// insets of a tile's cell relative to the viewport, for the fixed-position tile
+function cellInsets(t: Tile): [string, string, string, string] {
   const c = t.cell.getBoundingClientRect()
-  const pad = parseFloat(getComputedStyle(wall).paddingLeft) || 0
-  const s = t.tile.style
-  s.left = `${Math.round(w.left + pad - c.left)}px`
-  s.top = `${Math.round(w.top + pad - c.top)}px`
-  s.right = `${Math.round(c.right - (w.right - pad))}px`
-  s.bottom = `${Math.round(c.bottom - (w.bottom - pad))}px`
+  return [`${c.top}px`, `${c.left}px`, `${innerWidth - c.right}px`, `${innerHeight - c.bottom}px`]
 }
+
+function setInsets(t: Tile, v: readonly [string, string, string, string]): void {
+  const s = t.tile.style
+  ;[s.top, s.left, s.right, s.bottom] = v
+}
+
+const FULL = ['0px', '0px', '0px', '0px'] as const
 
 function zoom(i: number): void {
   if (zoomed >= 0) return
@@ -72,12 +76,11 @@ function zoom(i: number): void {
   if (!t) return
   select(i, true)
   audio.sfx('zoom')
-  const s = t.tile.style
-  s.left = s.top = s.right = s.bottom = '0px'
+  setInsets(t, cellInsets(t))
   t.tile.classList.add('big')
   void t.tile.offsetWidth
   zoomed = i
-  fitInsets(t)
+  setInsets(t, FULL)
 }
 
 function unzoom(): void {
@@ -85,12 +88,11 @@ function unzoom(): void {
   if (!t) return
   zoomed = -1
   audio.sfx('back')
-  const s = t.tile.style
-  s.left = s.top = s.right = s.bottom = '0px'
+  setInsets(t, cellInsets(t))
   setTimeout(() => {
     if (tiles[zoomed] === t) return
     t.tile.classList.remove('big')
-    s.left = s.top = s.right = s.bottom = ''
+    setInsets(t, ['', '', '', ''])
   }, 500)
 }
 
@@ -119,7 +121,7 @@ async function onCopy(t: Tile, id: string): Promise<void> {
   }, 2000)
 }
 
-PAGE_GAMES.forEach((g, i) => {
+function buildTile(g: GameMeta, i: number): void {
   const cell = document.createElement('div')
   cell.className = 'cell'
   const tile = document.createElement('div')
@@ -129,12 +131,15 @@ PAGE_GAMES.forEach((g, i) => {
   const name = document.createElement('span')
   name.className = 'name'
   name.textContent = g.name
+  const by = document.createElement('span')
+  by.className = 'by'
+  by.textContent = byline(g.author)
   const cmd = document.createElement('button')
   cmd.type = 'button'
   cmd.className = 'cmd'
   const code = document.createElement('code')
   code.textContent = installCommand(g.id)
-  tile.append(canvas, name, cmd)
+  tile.append(canvas, name, by, cmd)
   cell.appendChild(tile)
   grid.appendChild(cell)
   const t: Tile = { cell, tile, cmd, code, timer: 0 }
@@ -163,7 +168,18 @@ PAGE_GAMES.forEach((g, i) => {
       // no 2d context: the name stays on the dark tile
     }
   })
-})
+}
+
+async function loadGames(): Promise<GameMeta[]> {
+  try {
+    const res = await fetch('games.json')
+    if (!res.ok) throw new Error(String(res.status))
+    return (await res.json()) as GameMeta[]
+  } catch (e) {
+    console.error('coinslot: could not load games.json', e)
+    return []
+  }
+}
 
 // joystick
 let flick = 0
@@ -204,7 +220,7 @@ const onControl = () => !!document.activeElement?.closest('a, button')
 const wallInView = () => {
   const r = wall.getBoundingClientRect()
   const vis = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)
-  return vis >= r.height / 2
+  return vis >= Math.min(r.height, innerHeight) / 2
 }
 
 window.addEventListener('keydown', e => {
@@ -221,15 +237,26 @@ window.addEventListener('keydown', e => {
   const dir = ARROWS[e.key]
   if (!dir || zoomed >= 0 || onControl() || !wallInView()) return
   e.preventDefault()
+  if (!tiles.length) return
   flickStick(dir)
-  select(moveSel(sel, dir, cols()))
+  const next = moveSel(sel, dir, cols(), tiles.length)
+  select(next)
+  tiles[next]?.cell.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
 })
 
 window.addEventListener('resize', () => {
   const t = tiles[zoomed]
   if (!t) return
   t.tile.classList.add('nomotion')
-  fitInsets(t)
+  setInsets(t, FULL)
   void t.tile.offsetWidth
   t.tile.classList.remove('nomotion')
+})
+
+void loadGames().then(games => {
+  if (!games.length) {
+    wall.hidden = true
+    return
+  }
+  games.forEach(buildTile)
 })
