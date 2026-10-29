@@ -60,7 +60,8 @@ function select(i: number, quiet = false): void {
 // insets of a tile's cell relative to the viewport, for the fixed-position tile
 function cellInsets(t: Tile): [string, string, string, string] {
   const c = t.cell.getBoundingClientRect()
-  return [`${c.top}px`, `${c.left}px`, `${innerWidth - c.right}px`, `${innerHeight - c.bottom}px`]
+  const de = document.documentElement
+  return [`${c.top}px`, `${c.left}px`, `${de.clientWidth - c.right}px`, `${de.clientHeight - c.bottom}px`]
 }
 
 function setInsets(t: Tile, v: readonly [string, string, string, string]): void {
@@ -223,13 +224,20 @@ const wallInView = () => {
   return vis >= Math.min(r.height, innerHeight) / 2
 }
 
+function syncStick(): void {
+  stick.classList.toggle('away', !wallInView())
+}
+window.addEventListener('scroll', syncStick, { passive: true })
+window.addEventListener('resize', syncStick)
+syncStick()
+
 window.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return
   if (e.key === 'Escape' && zoomed >= 0) {
     unzoom()
     return
   }
-  if (e.key === 'Enter' && zoomed < 0 && !onControl() && wallInView()) {
+  if (e.key === 'Enter' && zoomed < 0 && tiles.length && !onControl() && wallInView()) {
     e.preventDefault()
     zoom(sel)
     return
@@ -241,7 +249,7 @@ window.addEventListener('keydown', e => {
   flickStick(dir)
   const next = moveSel(sel, dir, cols(), tiles.length)
   select(next)
-  tiles[next]?.cell.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' })
+  tiles[next]?.cell.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' })
 })
 
 window.addEventListener('resize', () => {
@@ -259,4 +267,5 @@ void loadGames().then(games => {
     return
   }
   games.forEach(buildTile)
+  syncStick()
 })
