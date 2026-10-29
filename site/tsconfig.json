@@ -10,5 +10,5 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src", "../scripts/record-loops.ts", "../scripts/build-site.ts", "../scripts/og-image.ts", "../scripts/check-contribution.ts"]
+  "include": ["src", "../scripts/record-loops.ts", "../scripts/build-site.ts", "../scripts/og-image.ts", "../scripts/site-url.ts", "../scripts/check-contribution.ts"]
 }

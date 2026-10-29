@@ -1,4 +1,5 @@
 import { copyFileSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { resolveSiteUrl } from './site-url'
 
 const sh = (cmd: string[]) => {
   const r = Bun.spawnSync(cmd, { stdout: 'inherit', stderr: 'inherit' })
@@ -6,14 +7,12 @@ const sh = (cmd: string[]) => {
 }
 
 const deploy = process.argv.includes('--deploy')
-let siteUrl = process.env.SITE_URL?.replace(/\/+$/, '')
-if (!siteUrl) {
-  if (deploy) {
-    console.error('SITE_URL is required for a deploy build')
-    process.exit(1)
-  }
-  console.warn('warning: SITE_URL unset, using http://localhost:4173')
-  siteUrl = 'http://localhost:4173'
+let siteUrl: string
+try {
+  siteUrl = resolveSiteUrl(process.env.SITE_URL, deploy)
+} catch (e) {
+  console.error((e as Error).message)
+  process.exit(1)
 }
 
 rmSync('site/dist', { recursive: true, force: true })
