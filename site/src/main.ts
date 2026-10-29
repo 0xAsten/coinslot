@@ -235,7 +235,15 @@ function flickStick(dir: Dir): void {
 
 // sound
 const wake = () => audio.unlock()
-for (const ev of ['pointerdown', 'keydown', 'click', 'touchend']) window.addEventListener(ev, wake, { passive: true })
+const SOUND_EVENTS = ['pointerdown', 'keydown', 'click', 'touchend']
+for (const ev of SOUND_EVENTS) window.addEventListener(ev, wake, { passive: true })
+// the browser keeps the page silent until a first gesture: nudge the ♪ button till then
+muteBtn.classList.add('hint')
+const settle = (): void => {
+  muteBtn.classList.remove('hint')
+  for (const ev of SOUND_EVENTS) window.removeEventListener(ev, settle)
+}
+for (const ev of SOUND_EVENTS) window.addEventListener(ev, settle, { passive: true })
 muteBtn.addEventListener('click', e => {
   audio.unlock()
   audio.setMuted(!audio.muted())

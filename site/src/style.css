@@ -27,6 +27,8 @@ body { overflow-x: hidden; }
 
 #mute { position: absolute; right: 22px; top: 20px; z-index: 8; font: 700 16px var(--mono); color: #ffd61f; background: rgba(0,0,0,.45); border: 0; border-radius: 8px; padding: 4px 9px; cursor: pointer; }
 #mute.off { opacity: .5; text-decoration: line-through; }
+#mute.hint { box-shadow: 0 0 0 2px rgba(255,214,31,.55); }
+@keyframes nudge { 0%, 100% { box-shadow: 0 0 0 2px rgba(255,214,31,.55); } 50% { box-shadow: 0 0 0 7px rgba(255,214,31,0); } }
 
 #stick { position: fixed; left: 50%; bottom: 22px; width: 96px; height: 96px; margin-left: -48px; z-index: 5; pointer-events: none; }
 #base { position: absolute; inset: 18px 6px 0 6px; border-radius: 50% / 40%; background: radial-gradient(ellipse at 50% 35%, #3a3f4a, #15181e); box-shadow: 0 8px 18px rgba(0,0,0,.6); }
@@ -53,6 +55,7 @@ body { overflow-x: hidden; }
 #about a { color: #ffd61f; }
 
 @media (prefers-reduced-motion: no-preference) {
+  #mute.hint { animation: nudge 1.6s ease-in-out infinite; }
   .tile { transition: filter .18s, box-shadow .18s; }
   .tile.big { transition: top .5s cubic-bezier(.2,.8,.2,1), left .5s cubic-bezier(.2,.8,.2,1), right .5s cubic-bezier(.2,.8,.2,1), bottom .5s cubic-bezier(.2,.8,.2,1), box-shadow .5s; }
   .tile.big.nomotion { transition: none; }
