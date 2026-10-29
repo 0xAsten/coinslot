@@ -1,5 +1,10 @@
 import { expect, test } from 'bun:test'
 import { GAMES } from './index'
+import { PAGE_GAMES } from '../src/games'
+
+test('page game list matches GAMES', () => {
+  expect(PAGE_GAMES.map(({ id, name }): { id: string; name: string } => ({ id, name }))).toEqual(GAMES.map(({ id, name }) => ({ id, name })))
+})
 
 const DT = 1 / 30
 const TICKS = 300
