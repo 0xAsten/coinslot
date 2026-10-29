@@ -3,6 +3,7 @@ import { copyCommand } from './copy'
 import { byline } from './byline'
 import { installCommand } from './install'
 import { loadTile, TilePlayer } from './player'
+import { NAME_PLACEHOLDER, PROMPT } from './prompt'
 import { moveSel, stickAngle, type Dir } from './wall-logic'
 
 const audio = createAudio()
@@ -96,6 +97,33 @@ function unzoom(): void {
     setInsets(t, ['', '', '', ''])
   }, 500)
 }
+
+// second screen: the contribution prompt, with the name placeholder highlighted
+const promptCode = document.getElementById('prompt') as HTMLElement
+const promptBtn = document.getElementById('copy-prompt') as HTMLButtonElement
+{
+  const [before = '', after = ''] = PROMPT.split(NAME_PLACEHOLDER)
+  const mark = document.createElement('mark')
+  mark.textContent = NAME_PLACEHOLDER
+  promptCode.replaceChildren(before, mark, after)
+}
+let promptTimer = 0
+async function onCopyPrompt(): Promise<void> {
+  const ok = await copyCommand(PROMPT, { clipboard: navigator.clipboard, execCopy })
+  if (!ok) {
+    selectText(promptCode)
+    return
+  }
+  audio.sfx('coin')
+  promptBtn.textContent = '✓ Copied'
+  promptBtn.classList.add('done')
+  clearTimeout(promptTimer)
+  promptTimer = window.setTimeout(() => {
+    promptBtn.textContent = '⧉ Copy prompt'
+    promptBtn.classList.remove('done')
+  }, 2000)
+}
+promptBtn.addEventListener('click', () => void onCopyPrompt())
 
 async function onCopy(t: Tile, id: string): Promise<void> {
   const ok = await copyCommand(installCommand(id), { clipboard: navigator.clipboard, execCopy })

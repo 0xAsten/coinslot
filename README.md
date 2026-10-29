@@ -114,3 +114,7 @@ bun run check    # bundle --check, validate, tsc, test for every plugin
 Changing a game's saved state shape? Bump `saveV` in its GameSpec so old saves are discarded instead of loaded.
 
 Engine types are not committed; run `scripts/vendor-types.sh <path-to-claude-code.d.ts>` once per Claude Code build.
+
+## Make a game
+
+Anyone can add a game: fork the repo, hand [AGENTS.md](AGENTS.md) to your coding agent, and it opens a pull request. See [CONTRIBUTING.md](CONTRIBUTING.md).
