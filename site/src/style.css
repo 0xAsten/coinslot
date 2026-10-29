@@ -51,3 +51,5 @@ body { overflow-x: hidden; }
 }
 @keyframes pop { 0% { scale: 1 } 40% { scale: 1.18 } 100% { scale: 1 } }
 @keyframes rise { to { transform: translateY(-60px); opacity: 0; } }
+
+.cmd code { font: inherit; user-select: all; -webkit-user-select: all; }

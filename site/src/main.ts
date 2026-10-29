@@ -11,7 +11,7 @@ const shaft = document.getElementById('shaft') as HTMLElement
 const stick = document.getElementById('stick') as HTMLElement
 const muteBtn = document.getElementById('mute') as HTMLButtonElement
 
-type Tile = { cell: HTMLElement; tile: HTMLElement; cmd: HTMLButtonElement; label: string; timer: number }
+type Tile = { cell: HTMLElement; tile: HTMLElement; cmd: HTMLButtonElement; code: HTMLElement; timer: number }
 const tiles: Tile[] = []
 let sel = 0
 let zoomed = -1
@@ -41,6 +41,10 @@ function selectText(el: HTMLElement): void {
   const s = getSelection()
   s?.removeAllRanges()
   s?.addRange(r)
+}
+
+function setIdle(t: Tile): void {
+  t.cmd.replaceChildren('⧉ ', t.code)
 }
 
 function select(i: number, quiet = false): void {
@@ -93,7 +97,7 @@ function unzoom(): void {
 async function onCopy(t: Tile, id: string): Promise<void> {
   const ok = await copyCommand(installCommand(id), { clipboard: navigator.clipboard, execCopy })
   if (!ok) {
-    selectText(t.cmd)
+    selectText(t.code)
     return
   }
   audio.sfx('coin')
@@ -110,7 +114,7 @@ async function onCopy(t: Tile, id: string): Promise<void> {
   setTimeout(() => coin.remove(), 900)
   clearTimeout(t.timer)
   t.timer = window.setTimeout(() => {
-    t.cmd.textContent = t.label
+    setIdle(t)
     t.cmd.classList.remove('done')
   }, 2000)
 }
@@ -128,12 +132,13 @@ PAGE_GAMES.forEach((g, i) => {
   const cmd = document.createElement('button')
   cmd.type = 'button'
   cmd.className = 'cmd'
-  const label = `⧉ ${installCommand(g.id)}`
-  cmd.textContent = label
+  const code = document.createElement('code')
+  code.textContent = installCommand(g.id)
   tile.append(canvas, name, cmd)
   cell.appendChild(tile)
   grid.appendChild(cell)
-  const t: Tile = { cell, tile, cmd, label, timer: 0 }
+  const t: Tile = { cell, tile, cmd, code, timer: 0 }
+  setIdle(t)
   tiles.push(t)
 
   cell.addEventListener('pointerenter', () => {
@@ -185,12 +190,13 @@ function flickStick(dir: Dir): void {
 
 // sound
 const wake = () => audio.unlock()
-window.addEventListener('pointerdown', wake)
-window.addEventListener('keydown', wake)
-muteBtn.addEventListener('click', () => {
+for (const ev of ['pointerdown', 'keydown', 'click', 'touchend']) window.addEventListener(ev, wake, { passive: true })
+muteBtn.addEventListener('click', e => {
   audio.unlock()
   audio.setMuted(!audio.muted())
   muteBtn.classList.toggle('off', audio.muted())
+  muteBtn.setAttribute('aria-pressed', String(audio.muted()))
+  if (e.detail > 0) muteBtn.blur()
 })
 
 const ARROWS: Record<string, Dir> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' }
@@ -207,7 +213,7 @@ window.addEventListener('keydown', e => {
     unzoom()
     return
   }
-  if (e.key === 'Enter' && zoomed < 0 && !onControl()) {
+  if (e.key === 'Enter' && zoomed < 0 && !onControl() && wallInView()) {
     e.preventDefault()
     zoom(sel)
     return

@@ -48,6 +48,7 @@ export function createAudio(): Audio {
     const tick = () => {
       if (dead || !ac) return
       try {
+        if (next < ac.currentTime) next = ac.currentTime + 0.05
         while (next < ac.currentTime + 0.3) {
           const l = LEAD[i % LEAD.length] ?? 0
           if (l) tone(hz(l), next, STEP * 0.9, 'square', 0.22)
@@ -109,6 +110,16 @@ export function createAudio(): Audio {
       dead = true
     }
   }
+
+  document.addEventListener('visibilitychange', () => {
+    try {
+      if (!ac || dead) return
+      if (document.hidden) void ac.suspend().catch(() => {})
+      else if (!isMuted) void ac.resume().catch(() => {})
+    } catch {
+      // ignore
+    }
+  })
 
   return { unlock, sfx, setMuted, muted: () => isMuted }
 }
