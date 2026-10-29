@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import ts from 'typescript'
 import { MARKER, SCAFFOLDED, scaffoldFiles } from './new-game'
@@ -9,6 +9,8 @@ export type Input = {
   read(path: string): string
   baseMarketplace: string
   headMarketplace: string
+  // file names in the repo's shared/ (the bundle every plugin must carry)
+  sharedFiles: string[]
 }
 
 const MARKET = '.claude-plugin/marketplace.json'
@@ -17,6 +19,14 @@ const HAND = new Set(['hooks/sim.ts', 'hooks/render.ts', 'hooks/game.tsx', 'hook
 const TEST = /^hooks\/[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.test\.tsx?$/
 const SHARED = /^hooks\/shared\/[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*\.tsx?$/
 const IMAGE = /^assets\/(?:[^/]+\/)*[^/]+\.(?:png|jpe?g|gif|webp)$/
+const DOCS = new Set(['README.md', 'CHANGELOG.md'])
+const SHARED_IMPORT = /^\.\/shared\/(?:cells|envelope|overlay|shell|link)$/
+const ALLOWED_GLOBALS = new Set(['Math', 'Number', 'Array', 'String', 'Boolean', 'Infinity', 'NaN', 'undefined', 'isFinite', 'isNaN', 'parseInt', 'parseFloat',
+  // beyond the ruling: inert, and the scaffold and every shipped game use them (clone via JSON, pixel buffers)
+  'JSON', 'Set', 'Map', 'Uint8Array', 'Uint16Array', 'Uint32Array', 'Int32Array', 'Float32Array', 'Float64Array',
+])
+const BANNED_PROPS = new Set(['constructor', 'prototype', '__proto__', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__'])
+const VENDOR_TYPES = resolve(import.meta.dir, '..', 'vendor', 'claude-code.d.ts')
 const SCAFFOLD_PATHS = [...SCAFFOLDED, 'types/index.d.ts']
 
 // Whole identifiers, matched on the parsed tree, so comments and string text never count.
@@ -24,7 +34,7 @@ const BANNED = new Set([
   'fetch', 'XMLHttpRequest', 'WebSocket', 'EventSource', 'eval', 'globalThis', 'process', 'Bun', 'Deno',
   'navigator', 'localStorage', 'document', 'window', 'atob', 'require', 'fromCharCode',
   // beyond the plan: other ways to reach a global or build code from data
-  'fromCodePoint', 'constructor', '__proto__', 'global', 'self', 'Reflect', 'WebAssembly', 'Worker', 'importScripts',
+  'fromCodePoint', 'constructor', 'prototype', '__proto__', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__', 'global', 'self', 'Reflect', 'WebAssembly', 'Worker', 'importScripts',
 ])
 
 const v = (file: string, rule: string, detail: string): Violation => ({ file, rule, detail })
@@ -53,7 +63,7 @@ function hasStringLiteral(n: ts.Node): boolean {
 
 function importOk(spec: string, isTest: boolean): boolean {
   if (spec === './sim' || spec === './render' || spec === 'claude-code') return true
-  if (/^\.\/shared\/[A-Za-z0-9_-]+$/.test(spec)) return true
+  if (SHARED_IMPORT.test(spec)) return true
   return isTest && spec === 'claude-code/testing'
 }
 
@@ -71,13 +81,63 @@ function typeOnlyExport(n: ts.ExportDeclaration): boolean {
   return !!c && ts.isNamedExports(c) && c.elements.length > 0 && c.elements.every(e => e.isTypeOnly)
 }
 
-// Scan one hand-written source for every rule that lives in the code itself.
-export function scanSource(file: string, text: string, isTest: boolean): Violation[] {
+export type Typed = { sf: ts.SourceFile; checker: ts.TypeChecker; own(sf: ts.SourceFile): boolean }
+
+// An index is safe when the compiler knows it is a number or one of a closed set of literal keys.
+const safeIndex = (t: ts.Type): boolean => {
+  if (t.isUnion()) return t.types.every(safeIndex)
+  if (t.isStringLiteral()) return !BANNED_PROPS.has(t.value)
+
+  return (t.flags & ts.TypeFlags.NumberLike) !== 0
+}
+
+function inTypePosition(n: ts.Node): boolean {
+  for (let a: ts.Node | undefined = n.parent; a && !ts.isStatement(a) && !ts.isSourceFile(a); a = a.parent) {
+    if (ts.isExpressionWithTypeArguments(a) && ts.isHeritageClause(a.parent) && a.parent.token === ts.SyntaxKind.ExtendsKeyword && ts.isClassLike(a.parent.parent)) return false
+    if (ts.isTypeNode(a)) return true
+  }
+
+  return false
+}
+
+// A free identifier is one that is not a property name, label, or part of an import.
+function isFree(n: ts.Identifier): boolean {
+  const p = n.parent
+  if (!p) return false
+  if (ts.isPropertyAccessExpression(p) && p.name === n) return false
+  if (ts.isQualifiedName(p) && p.right === n) return false
+  if (ts.isBindingElement(p) && p.propertyName === n) return false
+  if (ts.isJsxAttribute(p) || ts.isLabeledStatement(p) || ts.isBreakOrContinueStatement(p)) return false
+  if ((ts.isJsxOpeningElement(p) || ts.isJsxSelfClosingElement(p) || ts.isJsxClosingElement(p)) && p.tagName === n && /^[a-z]/.test(n.text)) return false
+  for (let a: ts.Node | undefined = p; a; a = a.parent) if (ts.isImportDeclaration(a) || ts.isExportDeclaration(a) || ts.isImportEqualsDeclaration(a)) return false
+
+  return !inTypePosition(n)
+}
+
+function typedChecks(file: string, n: ts.Node, t: Typed, out: Violation[]): void {
+  const { checker, own } = t
+  if (ts.isIdentifier(n) && isFree(n)) {
+    const sym = n.parent && ts.isShorthandPropertyAssignment(n.parent) ? checker.getShorthandAssignmentValueSymbol(n.parent) : checker.getSymbolAtLocation(n)
+    const decls = sym?.declarations ?? []
+    if (!decls.some(d => own(d.getSourceFile())) && !ALLOWED_GLOBALS.has(n.text)) out.push(v(file, 'global-allowlist', n.text))
+  }
+  if (ts.isElementAccessExpression(n) && !safeIndex(checker.getTypeAtLocation(n.argumentExpression))) out.push(v(file, 'banned-token', 'computed access'))
+  if (ts.isComputedPropertyName(n) && !safeIndex(checker.getTypeAtLocation(n.expression))) out.push(v(file, 'banned-token', 'computed access'))
+  if (n.kind === ts.SyntaxKind.AnyKeyword) out.push(v(file, 'no-any', 'any'))
+  if ((ts.isAsExpression(n) || ts.isTypeAssertionExpression(n)) && n.type.kind === ts.SyntaxKind.UnknownKeyword) out.push(v(file, 'no-any', 'as unknown'))
+  if ((ts.isCallExpression(n) || ts.isElementAccessExpression(n)) && checker.getTypeAtLocation(n.expression).flags & ts.TypeFlags.Any) out.push(v(file, 'no-any', 'any-typed expression'))
+  if (ts.canHaveModifiers(n) && ts.getModifiers(n)?.some(m => m.kind === ts.SyntaxKind.DeclareKeyword)) out.push(v(file, 'global-allowlist', 'declare'))
+}
+
+// Scan one hand-written source. With `typed`, also run the type-aware allowlist layer.
+// `minPos` skips everything before it (the scaffolded half of save-store.ts).
+export function scanSource(file: string, text: string, isTest: boolean, typed?: Typed, minPos = 0): Violation[] {
   const out: Violation[] = []
   const kind = file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS
-  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.ES2023, true, kind)
+  const sf = typed?.sf ?? ts.createSourceFile(file, text, ts.ScriptTarget.ES2023, true, kind)
   const diags = (sf as unknown as { parseDiagnostics: ts.Diagnostic[] }).parseDiagnostics
   if (diags.length > 0) out.push(v(file, 'banned-token', 'syntax error'))
+  if (sf.referencedFiles.length + sf.typeReferenceDirectives.length + sf.libReferenceDirectives.length > 0) out.push(v(file, 'global-allowlist', 'reference directive'))
 
   const checkSpec = (spec: string, typeOnly: boolean | null): void => {
     if (!importOk(spec, isTest)) out.push(v(file, 'import-allowlist', spec))
@@ -85,6 +145,11 @@ export function scanSource(file: string, text: string, isTest: boolean): Violati
   }
 
   const visit = (n: ts.Node): void => {
+    if (n.end <= minPos) return
+    if (typed) typedChecks(file, n, typed, out)
+    if (ts.isStringLiteralLike(n) && BANNED_PROPS.has(n.text) && !(n.parent && ts.isImportDeclaration(n.parent))) {
+      out.push(v(file, 'banned-token', `banned property name ${n.text}`))
+    }
     if (ts.isIdentifier(n)) {
       const name = n.text
       if (n.getText(sf).includes('\\')) out.push(v(file, 'banned-token', `unicode escape in identifier ${name}`))
@@ -116,6 +181,45 @@ export function scanSource(file: string, text: string, isTest: boolean): Violati
   visit(sf)
 
   return out
+}
+
+const libCache = new Map<string, ts.SourceFile>()
+
+// One in-memory program over the plugin's files, the vendored claude-code types and lib es2023.
+function buildProgram(vdir: string, files: Map<string, string>): ts.Program {
+  const options: ts.CompilerOptions = {
+    target: ts.ScriptTarget.ES2023,
+    lib: ['lib.es2023.d.ts'],
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    strict: true,
+    noUncheckedIndexedAccess: true,
+    noEmit: true,
+    skipLibCheck: true,
+    jsx: ts.JsxEmit.React,
+    jsxFactory: 'h',
+    jsxFragmentFactory: 'Fragment',
+    types: [],
+  }
+  const host = ts.createCompilerHost(options)
+  const virt = (f: string): string | undefined => files.get(f)
+  host.fileExists = f => files.has(f) || ts.sys.fileExists(f)
+  host.readFile = f => virt(f) ?? ts.sys.readFile(f)
+  host.directoryExists = d => [...files.keys()].some(k => k.startsWith(d.endsWith('/') ? d : `${d}/`)) || ts.sys.directoryExists(d)
+  host.getSourceFile = (f, lang) => {
+    const t = virt(f)
+    if (t !== undefined) return ts.createSourceFile(f, t, lang, true, f.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)
+    const hit = libCache.get(f)
+    if (hit) return hit
+    const disk = ts.sys.readFile(f)
+    if (disk === undefined) return undefined
+    const sf = ts.createSourceFile(f, disk, lang, true)
+    libCache.set(f, sf)
+
+    return sf
+  }
+
+  return ts.createProgram({ rootNames: [VENDOR_TYPES, ...files.keys()], options, host })
 }
 
 // The part of save-store.ts after the marker line is the contributor's.
@@ -184,6 +288,7 @@ function checkMarketplace(id: string, baseText: string, headText: string): strin
   if (!e || typeof e !== 'object') return 'new entry is not an object'
   if (e.name !== id) return `entry name must be ${id}`
   if (e.source !== `./plugins/${id}`) return `entry source must be ./plugins/${id}`
+  if (typeof e.description !== 'string' || e.description.length > 200) return 'entry description must be a string of at most 200 characters'
   const extra = Object.keys(e).filter(k => !['name', 'source', 'description'].includes(k))
   if (extra.length > 0) return `unexpected entry keys: ${extra.join(', ')}`
 
@@ -234,7 +339,7 @@ export function checkContribution(input: Input): Violation[] {
     }
   }
 
-  let region: { file: string; text: string } | null = null
+  let regionStart = -1
   for (const rel of SCAFFOLD_PATHS) {
     const file = dir + rel
     const got = tryRead(read, file)
@@ -259,58 +364,102 @@ export function checkContribution(input: Input): Violation[] {
       if (!g) out.push(v(file, 'scaffold-equal', 'parseSave marker is missing'))
       else {
         if (g.head !== s.head) out.push(v(file, 'scaffold-equal', 'differs from scaffold above the parseSave marker'))
-        region = { file, text: g.region }
+        regionStart = got.length - g.region.length
       }
     } else if (got !== w) out.push(v(file, 'scaffold-equal', 'differs from scaffold'))
   }
-  if (region) out.push(...scanSource(region.file, region.text, false))
+  // Everything the type-aware layer needs, as virtual files under one root.
+  const vdir = `/__contribution__/${id}/`
+  const files = new Map<string, string>()
+  const add = (rel: string): void => {
+    const t = tryRead(read, dir + rel)
+    if (t !== null && /\.(ts|tsx)$/.test(rel)) files.set(vdir + rel, t)
+  }
+  for (const rel of SCAFFOLD_PATHS) add(rel)
+  const sharedExpected: string[] = []
+  for (const name of input.sharedFiles) {
+    const src = tryRead(read, `shared/${name}`)
+    if (src !== null && !src.startsWith('// @host-only')) sharedExpected.push(name)
+  }
+  for (const name of sharedExpected) add(`hooks/shared/${name}`)
+  for (const p of changed) {
+    const rel = p.slice(dir.length)
+    if (HAND.has(rel) || TEST.test(rel) || SHARED.test(rel)) add(rel)
+  }
+  const program = buildProgram(vdir, files)
+  const checker = program.getTypeChecker()
+  const typedFor = (rel: string): Typed | undefined => {
+    const sf = program.getSourceFile(vdir + rel)
+
+    return sf ? { sf, checker, own: f => f.fileName.startsWith(vdir) } : undefined
+  }
+
+  if (regionStart >= 0) {
+    const file = `${dir}hooks/save-store.ts`
+    const t = typedFor('hooks/save-store.ts')
+    if (t) out.push(...scanSource(file, t.sf.text, false, t, regionStart))
+  }
+
+  // the bundle must carry exactly shared/'s files, changed or not
+  for (const name of sharedExpected) {
+    const p = `${dir}hooks/shared/${name}`
+    const got = tryRead(read, p)
+    if (got === null) out.push(v(p, 'scaffold-equal', 'missing from the shared bundle'))
+    else if (got !== tryRead(read, `shared/${name}`)) out.push(v(p, 'scaffold-equal', `differs from shared/${name}`))
+  }
 
   const scaffolded = new Set(SCAFFOLD_PATHS.map(p => dir + p))
   for (const p of changed) {
     if (p === MARKET || scaffolded.has(p)) continue
     const rel = p.slice(dir.length)
     if (HAND.has(rel) || TEST.test(rel)) {
-      const text = tryRead(read, p)
-      if (text !== null) out.push(...scanSource(p, text, TEST.test(rel)))
+      const t = typedFor(rel)
+      if (t) out.push(...scanSource(p, t.sf.text, TEST.test(rel), t))
     } else if (SHARED.test(rel)) {
-      const name = rel.slice('hooks/shared/'.length)
-      const got = tryRead(read, p)
-      const src = tryRead(read, `shared/${name}`)
-      if (got === null) continue
-      if (src === null) out.push(v(p, 'scaffold-equal', 'not in shared/'))
-      else if (src.startsWith('// @host-only')) out.push(v(p, 'scaffold-equal', 'host-only shared file'))
-      else if (got !== src) out.push(v(p, 'scaffold-equal', `differs from shared/${name}`))
-    } else if (rel.endsWith('.md') || IMAGE.test(rel)) {
-      // docs and images are inert
+      if (!sharedExpected.includes(rel.slice('hooks/shared/'.length))) out.push(v(p, 'scaffold-equal', 'not in shared/'))
+    } else if (DOCS.has(rel) || IMAGE.test(rel)) {
+      // inert: root README/CHANGELOG and images under assets/
     } else out.push(v(p, 'import-allowlist', 'unexpected file'))
   }
 
-  return out
+  const seen = new Set<string>()
+
+  return out.filter(x => {
+    const k = `${x.file}|${x.rule}|${x.detail}`
+    if (seen.has(k)) return false
+    seen.add(k)
+
+    return true
+  })
 }
 
 function git(root: string, args: string[]): string {
-  const p = Bun.spawnSync(['git', ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe' })
+  const p = Bun.spawnSync(['git', '-C', root, ...args], { cwd: root, stdout: 'pipe', stderr: 'pipe' })
   if (p.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${p.stderr.toString().trim()}`)
 
   return p.stdout.toString()
 }
 
-// Reads the checkout in the cwd; templates come from wherever this script lives,
-// so CI can run it from the base branch while the PR is checked out.
+// Files come from --root (the PR checkout, default cwd); templates and vendored types
+// come from wherever this script lives, so CI runs main's copy against a PR it never executes.
 function main(): void {
-  const baseRef = process.argv[2]
-  if (!baseRef) {
-    console.error('usage: bun scripts/check-contribution.ts <baseRef>')
+  const argv = process.argv.slice(2)
+  const ri = argv.indexOf('--root')
+  const root = resolve(ri >= 0 ? (argv[ri + 1] ?? '') : process.cwd())
+  const baseRef = argv.filter((_, i) => i !== ri && i !== ri + 1 || ri < 0)[0]
+  if (!baseRef || (ri >= 0 && !argv[ri + 1])) {
+    console.error('usage: bun scripts/check-contribution.ts [--root <dir>] <baseRef>')
     process.exit(2)
   }
-  const root = process.cwd()
   const range = `${baseRef}...HEAD`
   const changed = git(root, ['diff', '--no-renames', '--name-only', '-z', range]).split('\0').filter(Boolean)
+  const sharedDir = resolve(root, 'shared')
   const violations = checkContribution({
     changed,
     read: p => readFileSync(resolve(root, p), 'utf8'),
     baseMarketplace: git(root, ['show', `${baseRef}:${MARKET}`]),
     headMarketplace: readFileSync(resolve(root, MARKET), 'utf8'),
+    sharedFiles: readdirSync(sharedDir).filter(f => /\.tsx?$/.test(f)),
   })
 
   // symlinks (120000) and submodules (160000) can point anywhere

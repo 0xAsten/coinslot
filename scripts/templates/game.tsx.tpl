@@ -6,10 +6,12 @@ import type { Game, Input } from './sim'
 import { runShell } from './shared/shell'
 import type { GameSpec, ShellState } from './shared/shell'
 
-const KEYS: Record<string, number> = { up: 0, w: 0, right: 1, d: 1, down: 2, s: 2, left: 3, a: 3 }
+const KEYS = new Map<string, number>([
+  ['up', 0], ['w', 0], ['right', 1], ['d', 1], ['down', 2], ['s', 2], ['left', 3], ['a', 3],
+])
 
 function key(e: ClientKeyEvent, i: Input): Input {
-  const d = KEYS[e.key.toLowerCase()]
+  const d = KEYS.get(e.key.toLowerCase())
 
   return d !== undefined ? { ...i, dir: d } : i
 }

@@ -40,16 +40,23 @@ function run(files: Record<string, string>, head: string, extraChanged: string[]
     },
     baseMarketplace,
     headMarketplace: head,
+    sharedFiles: readdirSync(join(root, 'shared')).filter(n => /\.tsx?$/.test(n)),
   })
 }
-const rules = (v: Violation[]): string[] => [...new Set(v.map(x => x.rule))].sort()
 
-function withFile(path: string, text: string): Violation[] {
+function withFileAll(path: string, text: string): Violation[] {
   const { files, head } = fixture()
   files[`${P}${path}`] = text
   return run(files, head)
 }
+// The older tests pin the syntactic rules; the type-aware ones are pinned further down.
+const TYPE_RULES = new Set(['global-allowlist', 'no-any'])
+const rulesAll = (v: Violation[]): string[] => [...new Set(v.map(x => x.rule))].sort()
+const rules = (v: Violation[]): string[] => rulesAll(v.filter(x => !TYPE_RULES.has(x.rule)))
+const withFile = (path: string, text: string): Violation[] => withFileAll(path, text).filter(x => !TYPE_RULES.has(x.rule))
 const sim = (body: string): Violation[] => withFile('hooks/sim.ts', body)
+// replacing sim.ts leaves the scaffold's game untyped, so judge sim.ts alone
+const simAll = (body: string): Violation[] => withFileAll('hooks/sim.ts', body).filter(x => x.file.endsWith('/sim.ts'))
 
 test('a clean scaffolded game has no violations', () => {
   const { files, head } = fixture()
@@ -70,6 +77,7 @@ test('new-plugin-only: editing an existing game', () => {
     read: () => 'x',
     baseMarketplace,
     headMarketplace: baseMarketplace,
+    sharedFiles: [],
   })
   expect(rules(v)).toContain('new-plugin-only')
 })
@@ -285,4 +293,123 @@ test('test files are scanned like the rest, and may use claude-code/testing', ()
 
 test('a class constructor declaration is not the banned property', () => {
   expect(sim('export class A { constructor(private a: number) {} }\n')).toEqual([])
+})
+
+// ---- fix round 1 ----
+
+const hit = (v: Violation[], rule: string, detail?: string): boolean => v.some(x => x.rule === rule && (detail === undefined || x.detail.includes(detail)))
+
+test('reflection routes to Function are closed (probe: variable key)', () => {
+  const v = simAll("const k = 'constr' + 'uctor'\nconst j = 'fet' + 'ch'\nexport const go = () => { const g = (() => 0)[k]('return this')(); return g[j]('https://evil') }\n")
+  expect(hit(v, 'banned-token', 'computed access')).toBe(true)
+  expect(hit(v, 'banned-token', 'banned property name')).toBe(false)
+})
+
+test('reflection routes to Function are closed (probe: getOwnPropertyDescriptor)', () => {
+  const v = simAll("export const F = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(() => 0), 'constructor')!.value\nexport const g = F('return this')()\n")
+  expect(hit(v, 'global-allowlist', 'Object')).toBe(true)
+  expect(hit(v, 'banned-token', 'banned property name constructor')).toBe(true)
+  expect(hit(v, 'no-any')).toBe(true)
+})
+
+test('reflection routes to Function are closed (probe: string-key destructure)', () => {
+  const v = simAll("const { 'constructor': F } = (() => 0) as any\nexport const g = F('return this')()\n")
+  expect(hit(v, 'banned-token', 'banned property name constructor')).toBe(true)
+  expect(hit(v, 'no-any', 'any')).toBe(true)
+})
+
+test('reflection routes to Function are closed (probe: Object.entries scan)', () => {
+  const v = simAll('const fn: any = () => 0\nexport const F = Object.entries(Object.getOwnPropertyDescriptors(Object.getPrototypeOf(fn))).find(([n]) => n.length === 11)![1].value\n')
+  expect(hit(v, 'global-allowlist', 'Object')).toBe(true)
+  expect(hit(v, 'no-any')).toBe(true)
+})
+
+test('reflection routes to Function are closed (probe: inside the parseSave region)', () => {
+  const { files, head } = fixture()
+  files[`${P}hooks/save-store.ts`] = files[`${P}hooks/save-store.ts`]!.replace('void v', "const k = 'constr'+'uctor'; ((() => 0) as any)[k]('return this')()")
+  const v = run(files, head)
+  expect(hit(v, 'no-any')).toBe(true)
+  expect(hit(v, 'banned-token', 'computed access')).toBe(true)
+  // the scaffolded half still passes: only the region is judged
+  expect(run(fixture().files, head)).toEqual([])
+})
+
+test('global-allowlist: free identifiers must be allowed globals or own/imported', () => {
+  for (const g of ['Object', 'Reflect', 'Proxy', 'Symbol', 'Date', 'Promise']) {
+    expect(hit(simAll(`export const a = ${g}\n`), 'global-allowlist', g), g).toBe(true)
+  }
+  expect(hit(simAll('export const a = Date.now()\n'), 'global-allowlist', 'Date')).toBe(true)
+  // shadowing a global with an own declaration is judged on what it is initialised with
+  expect(simAll('export const a = [1, 2].map(x => Math.floor(x * 2.5)).length + Number.parseInt("1") + Array.from({ length: 2 }).length + "ab".length\n')).toEqual([])
+  expect(simAll("export const a = new Map<string, number>([['a', 1]]).get('a') ?? JSON.parse('1')\n")).toEqual([])
+  // ambient declarations and reference directives cannot smuggle a global in
+  expect(hit(simAll('declare const Object: { keys(o: object): string[] }\nexport const a = Object.keys({})\n'), 'global-allowlist', 'declare')).toBe(true)
+  expect(hit(simAll('/// <reference lib="dom" />\nexport const a = 1\n'), 'global-allowlist', 'reference directive')).toBe(true)
+  expect(hit(simAll('export const a = { Object: 1 }\nconst Object2 = a\nexport { Object2 }\n'), 'global-allowlist')).toBe(false)
+  expect(hit(simAll('const Object = 1\nexport const a = { Object }\n'), 'global-allowlist')).toBe(false)
+})
+
+test('computed access: the index must be a number or a closed literal set', () => {
+  expect(simAll('export const a = (xs: number[], i: number) => xs[i] ?? xs[0]\n')).toEqual([])
+  expect(simAll("type K = 'a' | 'b'\nexport const a = (o: Record<K, number>, k: K) => o[k]\n")).toEqual([])
+  const s = simAll('export const a = (o: Record<string, number>, k: string) => o[k]\n')
+  expect(hit(s, 'banned-token', 'computed access')).toBe(true)
+  expect(hit(simAll("export const a = (o: Record<string, number>) => { const { [String(1)]: x } = o; return x }\n"), 'banned-token', 'computed access')).toBe(true)
+  expect(hit(simAll("type K = 'constructor' | 'b'\nexport const a = (o: Record<K, number>, k: K) => o[k]\n"), 'banned-token')).toBe(true)
+})
+
+test('no-any', () => {
+  expect(hit(simAll('export const a = (x: any) => 1\n'), 'no-any')).toBe(true)
+  expect(hit(simAll('export const a = (x: number) => x as any\n'), 'no-any')).toBe(true)
+  expect(hit(simAll('export const a = (x: number) => <any>x\n'), 'no-any')).toBe(true)
+  expect(hit(simAll('export const a = (x: number) => x as unknown\n'), 'no-any', 'as unknown')).toBe(true)
+  expect(hit(simAll('export const a = (x: number): unknown => x\n'), 'no-any')).toBe(false)
+})
+
+test('banned property names in every position', () => {
+  for (const name of ['constructor', 'prototype', '__proto__', '__defineGetter__', '__defineSetter__', '__lookupGetter__', '__lookupSetter__']) {
+    for (const src of [
+      `export const a = (o: { ${name}: number }) => o.${name}\n`,
+      `export const a = { '${name}': 1 }\n`,
+      `export const a = { ['${name}']: 1 }\n`,
+      `export const a = (o: { ${name}: number }) => { const { ${name}: x } = o; return x }\n`,
+      `export const a = (o: { ${name}: number }) => { const { '${name}': x } = o; return x }\n`,
+      `export const a = { ${name}: 1 }\n`,
+    ]) {
+      expect(hit(simAll(src), 'banned-token'), `${name}: ${src}`).toBe(true)
+    }
+  }
+})
+
+test('md files: only README.md and CHANGELOG.md at the plugin root; images only under assets/', () => {
+  for (const p of ['commands/pwn.md', 'skills/arcade/SKILL.md', 'agents/x.md', 'hooks/notes.md', 'docs/README.md', 'assets/x.md', 'assets/x.svg', 'shot.png']) {
+    expect(hit(withFileAll(p, 'x'), 'import-allowlist', 'unexpected file'), p).toBe(true)
+  }
+  for (const p of ['README.md', 'CHANGELOG.md', 'assets/a.png', 'assets/b.jpg', 'assets/c.gif', 'assets/d.webp', 'assets/sub/e.png']) {
+    expect(withFileAll(p, 'x'), p).toEqual([])
+  }
+})
+
+test('imports narrowed to the five shared modules', () => {
+  for (const m of ['cells', 'envelope', 'overlay', 'shell', 'link']) {
+    expect(sim(`import type * as m from './shared/${m}'\nexport type T = typeof m\n`), m).toEqual([])
+  }
+  for (const m of ['hooks-pane', 'hooks-link', 'cells.test']) {
+    expect(rules(sim(`import * as m from './shared/${m}'\nexport default m\n`)), m).toEqual(['import-allowlist'])
+  }
+})
+
+test('marketplace entry description: string, at most 200 chars', () => {
+  const { files } = fixture()
+  expect(rules(run(files, headWith([{ ...ENTRY, description: 'x'.repeat(201) }])))).toEqual(['marketplace-append'])
+  expect(rules(run(files, headWith([{ ...ENTRY, description: 5 }])))).toEqual(['marketplace-append'])
+  expect(rules(run(files, headWith([{ name: ID, source: `./plugins/${ID}` }])))).toEqual(['marketplace-append'])
+  expect(run(files, headWith([{ ...ENTRY, description: 'x'.repeat(200) }]))).toEqual([])
+})
+
+test('the shared bundle must be complete, not just unchanged', () => {
+  const { files, head } = fixture()
+  delete files[`${P}hooks/shared/shell.tsx`]
+  const v = run(files, head)
+  expect(v.some(x => x.rule === 'scaffold-equal' && x.detail.includes('missing') && x.file.endsWith('shell.tsx'))).toBe(true)
 })
