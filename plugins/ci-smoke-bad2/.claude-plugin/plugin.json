@@ -1,0 +1,9 @@
+{
+  "name": "ci-smoke-bad2",
+  "version": "0.1.0",
+  "description": "A CI smoke-test game for Claude Code. Steer a dot and collect coins. Pauses when Claude finishes; Claude's tool calls drop bonus coins.",
+  "author": {
+    "name": "Smoke Test"
+  },
+  "license": "MIT"
+}
