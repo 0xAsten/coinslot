@@ -6,14 +6,33 @@ Coin Slot is a set of original arcade games that run inside Claude Code while it
 
 ## 1. Set up
 
+Coin Slot games are Claude Code mods. **Building and testing one requires Claude Code installed** (the `claude` command on PATH): `bun run check` calls `claude plugin validate` and `claude plugin test`. You also need `bun` and `npx`.
+
+Fork first, and branch before you scaffold:
+
 ```bash
+gh repo fork beasaltfish/coinslot --clone && cd coinslot
+git remote add upstream https://github.com/beasaltfish/coinslot.git   # skip if `gh` already added it
+git fetch upstream
+git switch -c game/<id> upstream/main
 bun install
+```
+
+Get the engine types (needed by `bun run check` and the full checker). They are Anthropic's file and are never committed: `vendor/` is gitignored, so never `git add` it. In Claude Code the file ships with the built-in plugin-authoring skill as `types/claude-code.d.ts`. The bundled-skill path varies by Claude Code version: search for `claude-code.d.ts` under your Claude Code install and skills directories, or ask your harness where the plugin-authoring skill lives. Then:
+
+```bash
+bash scripts/vendor-types.sh <path to claude-code.d.ts>
+```
+
+Then scaffold:
+
+```bash
 bun run new-game <id> "<Title>"
 ```
 
 - `<id>` matches `^[a-z][a-z0-9-]{2,30}$` (lowercase, digits, hyphens; 3-31 chars). It must not exist in `plugins/`. The wall shows it uppercased (`my-game` -> `MY GAME`).
 - `<Title>` is non-empty and has no `'`, `\` or newline.
-- This creates `plugins/<id>/`, appends an entry to `.claude-plugin/marketplace.json` (description `TODO`), and copies the shared runtime into `plugins/<id>/hooks/shared/`. The scaffold is a working starter game (steer a dot, collect coins). Read it first: `plugins/<id>/hooks/sim.ts`, `render.ts`, `game.tsx`, `showcase.ts`, `sim.test.ts`.
+- This creates `plugins/<id>/`, appends an entry to `.claude-plugin/marketplace.json` (description `TODO`), and copies the shared runtime into `plugins/<id>/hooks/shared/` (leave that alone). The scaffold is a working starter game (steer a dot, collect coins). Read it first: `plugins/<id>/hooks/sim.ts`, `render.ts`, `game.tsx`, `showcase.ts`, `sim.test.ts`.
 
 ## 2. What you may edit
 
@@ -66,6 +85,15 @@ Rules:
 - **Show the outcome.** The player must see score or progress and what to do (see `hint` and `render.ts`'s HUD).
 - Only `render.ts` produces `Cells` (`{ cols, rows, ch, fg, bg }`, `rows = floor(h / 2)`). Colors are `0xRRGGBB` numbers.
 
+### Required exports
+
+Keep the scaffold's names; the shell, the tests and the site recorder import them:
+
+- `sim.ts`: `newGame(w, h, seed)`, `step(g, dt, input)`, `resize(g, w, h)`, `spawnBonus(g)`, and the types `Game` and `Input`.
+- `render.ts`: `renderCells(g)`.
+- `showcase.ts`: `SHOWCASE = { seed, warmupS, bot, progress, over }`.
+- `game.tsx`: `export const SPEC: GameSpec<Game, Input>` and `export default (raw, surface) => runShell(SPEC, raw, surface)`, as scaffolded.
+
 ### showcase.ts keeps the game alive
 
 `showcase.ts` exports `SHOWCASE = { seed, warmupS, bot, progress, over }`. A bot plays your game for the site's preview loop, and `scripts/liveness.test.ts` enforces this bar on a 56x56 field (`start(56, 56, seed)`, i.e. 56 columns, 28 rows):
@@ -75,7 +103,7 @@ Rules:
 3. `progress` after those 300 ticks must be **greater** than before them (it must grow: score, distance, bricks broken).
 4. `render` must return a frame with `cols === 56` and `rows === 28`.
 
-`bot(g)` returns an `Input` and may only read the game state. Make it a competent player, not a cheat.
+`bot(g)` returns an `Input` and reads only `g` (the game state). Make it a competent player, not a cheat.
 
 ## 4. Originality and safety
 
@@ -150,11 +178,11 @@ import { expect, test } from 'claude-code/testing'
 import { newGame, step } from './sim'
 ```
 
-Cover rules, collisions, scoring, bonus cap, `resize` staying in bounds, determinism (same seed, same run) and the bot staying alive. Tests are sim/render tests only: do not write pane or save-store tests that touch `$`, `register.tsx` or `save-store.ts` (the `$` identifier is banned). Test files must be named `hooks/<name>.test.ts` or `.test.tsx`, and follow the same code rules as the rest.
+Cover rules, collisions, scoring, the bonus cap, `resize` staying in bounds and determinism (same seed, same run). Tests may import `./sim`, `./render`, `./shared/cells` and `claude-code/testing` (not `showcase.ts`; `scripts/liveness.test.ts` already plays your bot). Tests are sim/render tests only: do not write pane or save-store tests that touch `$`, `register.tsx` or `save-store.ts` (the `$` identifier is banned). Test files must be named `hooks/<name>.test.ts` or `.test.tsx`, and follow the same code rules as the rest.
 
 ## 7. register.tsx
 
-Change only the `opened:` line: a single plain string literal (no backticks, no backslashes, no line breaks) telling the player how to play, in the form `<Title> opened. <Controls>; p pauses; esc returns to chat.` Everything else in the file must stay as the scaffold wrote it, including `title:`.
+Change only the `opened:` line: a single plain string literal (no backticks, no backslashes, no line breaks; `/` and `·` are fine) telling the player how to play, in the form `<Title> opened. <Controls>; p pauses; esc returns to chat.` Everything else in the file must stay as the scaffold wrote it, including `title:`.
 
 ## 8. Checks (run in order, until all pass)
 
@@ -163,22 +191,18 @@ bun install
 bun run check
 bun test site scripts
 git add -A && git commit -m "game: <Title>"
-git fetch upstream            # see section 9 for the upstream remote
+git fetch upstream
 bun scripts/check-contribution.ts upstream/main
 ```
 
-- `bun run check` validates the marketplace and each plugin with the `claude` CLI (`claude plugin validate`), verifies the shared bundle and type-checks every game. It needs the `claude` and `npx` commands on PATH.
-- `bun test site scripts` runs every game's tests plus the liveness bar from section 3.
-- `check-contribution.ts` diffs `<baseRef>...HEAD`, so **commit first**; it only sees committed changes. `<baseRef>` is the upstream `main` (`upstream/main`), not your fork's. If you are not in a fork, use `origin/main`. Use `--root <dir>` only to check a checkout elsewhere: `bun scripts/check-contribution.ts --root <dir> upstream/main`. It prints `contribution check: clean` on success; otherwise each line is `file: [rule] detail`. Fix the code, commit again, rerun.
-- Do not open the PR until all four commands pass.
+- `bun run check` runs, for the marketplace and every game: shared-bundle check (`bundle --check`), `claude plugin validate`, `tsc` (via `npx -y -p typescript@5.9.3`, which needs the network the first time unless cached), and `claude plugin test`, which runs your `hooks/*.test.ts`. It needs `vendor/claude-code.d.ts` (section 1).
+- `bun test site scripts` runs the site and scripts tests, including the liveness bar from section 3 for every game. It must pass without your editing anything under `scripts/` or `site/`.
+- `check-contribution.ts` diffs `<baseRef>...HEAD`, so **commit first**; it only sees committed changes. `<baseRef>` is the upstream `main` (`upstream/main`), not your fork's. Use `--root <dir>` only to check a checkout elsewhere: `bun scripts/check-contribution.ts --root <dir> upstream/main`. It prints `contribution check: clean` on success; otherwise each line is `file: [rule] detail`. Fix the code, commit again, rerun. Without `vendor/claude-code.d.ts` it stops with an error; get the types (section 1) rather than skipping.
+- Do not open the PR until all of these pass.
 
 ## 9. Open the pull request
 
-1. Fork `beasaltfish/coinslot` on GitHub (`gh repo fork beasaltfish/coinslot --clone` does fork and clone).
-2. Add the upstream remote if it is missing: `git remote add upstream https://github.com/beasaltfish/coinslot.git`.
-3. Work on a branch named `game/<id>`: `git switch -c game/<id>` (from an up-to-date `upstream/main`).
-4. Commit with a message like `game: <Title>`; push the branch to your fork.
-5. Open a PR to `beasaltfish/coinslot` `main`, titled `game: <Title>`, with this description:
+You are already on `game/<id>` (section 1) and have committed there. Push the branch to your fork (`git push -u origin game/<id>`), then open a PR to `beasaltfish/coinslot` `main`, titled `game: <Title>`, with this description:
 
 ```markdown
 ## <Title>
@@ -197,8 +221,12 @@ bun scripts/check-contribution.ts upstream/main
 - [x] bun scripts/check-contribution.ts upstream/main
 ```
 
-One game per PR. Do not push to `main` of the upstream repo.
+One game per PR. Do not push to `main` of the upstream repo, and never commit `vendor/`.
 
 ## For the maintainer
 
-`check-contribution.ts` is a tripwire, not a sandbox: it catches the obvious and keeps the diff small, but it cannot prove code is safe. Review the diff by hand first. Only then run the PR's tests, and run them in an isolated environment (a throwaway container or VM), never on a machine with credentials.
+`check-contribution.ts` is a tripwire, not a sandbox: it catches the obvious and keeps the diff small, but it cannot prove code is safe. CI runs it with `--no-types` (the engine types are not in the repo), so its type layer did not run. Before merging:
+
+1. Run the full checker locally, with types: `bun scripts/check-contribution.ts --root <pr checkout> <base>` (needs `vendor/claude-code.d.ts`).
+2. Review the diff by hand.
+3. Only then run the PR's tests, in an isolated environment (a throwaway container or VM), never on a machine with credentials.

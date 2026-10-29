@@ -6,11 +6,13 @@ import { readGameMetas } from './games'
 
 const root = resolve(import.meta.dir, '..')
 
-test('reads the six games in marketplace order', () => {
+test('reads every game in marketplace order', () => {
+  const market = JSON.parse(readFileSync(join(root, '.claude-plugin', 'marketplace.json'), 'utf8')) as { plugins: { name: string }[] }
   const metas = readGameMetas(root)
-  expect(metas.map(m => m.id)).toEqual(['fish-shooter', 'brick-breaker', 'snake', 'space-shooter', 'tap-flyer', 'jump-runner'])
-  expect(metas.every(m => m.author === 'beasaltfish')).toBe(true)
-  expect(metas.find(m => m.id === 'brick-breaker')?.name).toBe('BRICK BREAKER')
+  expect(metas.map(m => m.id)).toEqual(market.plugins.map(p => p.name))
+  expect(metas.length).toBeGreaterThan(0)
+  expect(metas.every(m => m.author.trim() !== '' && m.author === m.author.trim())).toBe(true)
+  expect(metas.every(m => m.name === m.id.toUpperCase().replaceAll('-', ' '))).toBe(true)
 })
 
 function fixture(author: unknown): string {

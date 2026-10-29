@@ -30,8 +30,9 @@ function fixture(): { files: Record<string, string>; head: string } {
   return { files, head: headWith([ENTRY]) }
 }
 
-function run(files: Record<string, string>, head: string, extraChanged: string[] = []): Violation[] {
+function run(files: Record<string, string>, head: string, extraChanged: string[] = [], opts: { types?: boolean; vendorTypes?: string } = {}): Violation[] {
   return checkContribution({
+    ...opts,
     changed: [...Object.keys(files), ...extraChanged, '.claude-plugin/marketplace.json'],
     read: p => {
       const t = files[p] ?? (p.startsWith('shared/') ? readFileSync(join(root, p), 'utf8') : undefined)
@@ -462,4 +463,22 @@ test('the shared bundle must be complete, not just unchanged', () => {
   delete files[`${P}hooks/shared/shell.tsx`]
   const v = run(files, head)
   expect(v.some(x => x.rule === 'scaffold-equal' && x.detail.includes('missing') && x.file.endsWith('shell.tsx'))).toBe(true)
+})
+
+test('--no-types: syntactic rules still run without the type layer', () => {
+  const bad = `export const a = 1\nexport function f(x: any, xs: number[], k: string) { return [xs[k], fetch('x'), x] }\n`
+  const { files, head } = fixture()
+  files[`${P}hooks/sim.ts`] = bad
+  const got = run(files, head, [], { types: false, vendorTypes: '/nonexistent/claude-code.d.ts' })
+  expect(rulesAll(got)).toEqual(['banned-token', 'no-any'])
+  const clean = fixture()
+  expect(run(clean.files, clean.head, [], { types: false, vendorTypes: '/nonexistent/claude-code.d.ts' })).toEqual([])
+  const save = fixture()
+  save.files[`${P}hooks/save-store.ts`] += '\nexport const z = eval("1")\n'
+  expect(rulesAll(run(save.files, save.head, [], { types: false }))).toEqual(['banned-token'])
+})
+
+test('without --no-types a missing vendor file is a hard error', () => {
+  const { files, head } = fixture()
+  expect(() => run(files, head, [], { vendorTypes: '/nonexistent/claude-code.d.ts' })).toThrow('vendor-types.sh')
 })

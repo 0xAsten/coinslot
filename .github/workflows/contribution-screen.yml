@@ -40,4 +40,5 @@ jobs:
       - name: Screen the contribution
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: bun scripts/check-contribution.ts --root pr "$BASE_SHA"
+        # --no-types: the engine types are not in the repo, so the type layer runs locally at merge time
+        run: bun scripts/check-contribution.ts --no-types --root pr "$BASE_SHA"

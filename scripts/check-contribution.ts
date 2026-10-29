@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import ts from 'typescript'
 import { MARKER, SCAFFOLDED, scaffoldFiles } from './new-game'
@@ -11,6 +11,9 @@ export type Input = {
   headMarketplace: string
   // file names in the repo's shared/ (the bundle every plugin must carry)
   sharedFiles: string[]
+  // false skips the ts.Program layer (needs the vendored engine types); default true
+  types?: boolean
+  vendorTypes?: string
 }
 
 const MARKET = '.claude-plugin/marketplace.json'
@@ -130,6 +133,10 @@ function typedChecks(file: string, n: ts.Node, t: Typed, out: Violation[]): void
     const decls = sym?.declarations ?? []
     if (!decls.some(d => own(d.getSourceFile())) && !ALLOWED_GLOBALS.has(n.text)) out.push(v(file, 'global-allowlist', n.text))
   }
+}
+
+// Purely syntactic, so they also run without the type layer.
+function syntacticChecks(file: string, n: ts.Node, out: Violation[]): void {
   if (n.kind === ts.SyntaxKind.AnyKeyword) out.push(v(file, 'no-any', 'any'))
   if ((ts.isAsExpression(n) || ts.isTypeAssertionExpression(n)) && n.type.kind === ts.SyntaxKind.UnknownKeyword) out.push(v(file, 'no-any', 'as unknown'))
   if (ts.canHaveModifiers(n) && ts.getModifiers(n)?.some(m => m.kind === ts.SyntaxKind.DeclareKeyword)) out.push(v(file, 'global-allowlist', 'declare'))
@@ -163,6 +170,7 @@ export function scanSource(file: string, text: string, isTest: boolean, typed?: 
   const visit = (n: ts.Node): void => {
     if (n.end <= minPos) return
     if (typed) typedChecks(file, n, typed, out)
+    syntacticChecks(file, n, out)
     if (ts.isStringLiteralLike(n) && BANNED_PROPS.has(n.text) && !(n.parent && ts.isImportDeclaration(n.parent))) {
       out.push(v(file, 'banned-token', `banned property name ${n.text}`))
     }
@@ -204,7 +212,7 @@ export function scanSource(file: string, text: string, isTest: boolean, typed?: 
 const libCache = new Map<string, ts.SourceFile>()
 
 // One in-memory program over the plugin's files, the vendored claude-code types and lib es2023.
-function buildProgram(vdir: string, files: Map<string, string>): ts.Program {
+function buildProgram(vdir: string, files: Map<string, string>, vendorTypes: string): ts.Program {
   const options: ts.CompilerOptions = {
     target: ts.ScriptTarget.ES2023,
     lib: ['lib.es2023.d.ts'],
@@ -237,7 +245,7 @@ function buildProgram(vdir: string, files: Map<string, string>): ts.Program {
     return sf
   }
 
-  return ts.createProgram({ rootNames: [VENDOR_TYPES, ...files.keys()], options, host })
+  return ts.createProgram({ rootNames: [vendorTypes, ...files.keys()], options, host })
 }
 
 // The part of save-store.ts after the marker line is the contributor's.
@@ -404,9 +412,15 @@ export function checkContribution(input: Input): Violation[] {
     const rel = p.slice(dir.length)
     if (HAND.has(rel) || TEST.test(rel) || SHARED.test(rel)) add(rel)
   }
-  const program = buildProgram(vdir, files)
-  const checker = program.getTypeChecker()
+  const useTypes = input.types !== false
+  const vendor = input.vendorTypes ?? VENDOR_TYPES
+  if (useTypes && !existsSync(vendor)) {
+    throw new Error(`${vendor} is missing: the type layer needs the engine types (bash scripts/vendor-types.sh <path to claude-code.d.ts>), or pass --no-types to skip that layer and run the full check locally`)
+  }
+  const program = useTypes ? buildProgram(vdir, files, vendor) : null
+  const checker = program?.getTypeChecker()
   const typedFor = (rel: string): Typed | undefined => {
+    if (!program || !checker) return undefined
     const sf = program.getSourceFile(vdir + rel)
 
     return sf ? { sf, program, checker, own: f => f.fileName.startsWith(vdir) } : undefined
@@ -416,6 +430,7 @@ export function checkContribution(input: Input): Violation[] {
     const file = `${dir}hooks/save-store.ts`
     const t = typedFor('hooks/save-store.ts')
     if (t) out.push(...scanSource(file, t.sf.text, false, t, regionStart))
+    else if (!useTypes) out.push(...scanSource(file, tryRead(read, file) ?? '', false, undefined, regionStart))
   }
 
   // the bundle must carry exactly shared/'s files, changed or not
@@ -433,6 +448,7 @@ export function checkContribution(input: Input): Violation[] {
     if (HAND.has(rel) || TEST.test(rel)) {
       const t = typedFor(rel)
       if (t) out.push(...scanSource(p, t.sf.text, TEST.test(rel), t))
+      else if (!useTypes) out.push(...scanSource(p, tryRead(read, p) ?? '', TEST.test(rel)))
     } else if (SHARED.test(rel)) {
       if (!sharedExpected.includes(rel.slice('hooks/shared/'.length))) out.push(v(p, 'scaffold-equal', 'not in shared/'))
     } else if (DOCS.has(rel) || IMAGE.test(rel)) {
@@ -461,12 +477,14 @@ function git(root: string, args: string[]): string {
 // Files come from --root (the PR checkout, default cwd); templates and vendored types
 // come from wherever this script lives, so CI runs main's copy against a PR it never executes.
 function main(): void {
-  const argv = process.argv.slice(2)
+  const raw = process.argv.slice(2)
+  const noTypes = raw.includes('--no-types')
+  const argv = raw.filter(a => a !== '--no-types')
   const ri = argv.indexOf('--root')
   const root = resolve(ri >= 0 ? (argv[ri + 1] ?? '') : process.cwd())
   const baseRef = argv.filter((_, i) => i !== ri && i !== ri + 1 || ri < 0)[0]
   if (!baseRef || (ri >= 0 && !argv[ri + 1])) {
-    console.error('usage: bun scripts/check-contribution.ts [--root <dir>] <baseRef>')
+    console.error('usage: bun scripts/check-contribution.ts [--no-types] [--root <dir>] <baseRef>')
     process.exit(2)
   }
   const range = `${baseRef}...HEAD`
@@ -478,6 +496,7 @@ function main(): void {
     baseMarketplace: git(root, ['show', `${baseRef}:${MARKET}`]),
     headMarketplace: readFileSync(resolve(root, MARKET), 'utf8'),
     sharedFiles: readdirSync(sharedDir).filter(f => /\.tsx?$/.test(f)),
+    types: !noTypes,
   })
 
   // symlinks (120000) and submodules (160000) can point anywhere
@@ -486,6 +505,7 @@ function main(): void {
     if (m && [m[1], m[2]].some(x => x === '120000' || x === '160000')) violations.push(v(m[3]!, 'import-allowlist', 'symlink or submodule'))
   }
 
+  if (noTypes) console.log('type layer skipped (--no-types): run the full check locally before merging')
   for (const x of violations) console.log(`${x.file}: [${x.rule}] ${x.detail}`)
   if (violations.length > 0) {
     console.log(`\n${violations.length} violation(s)`)
