@@ -11,6 +11,13 @@ describe('resolveSiteUrl', () => {
       expect(() => resolveSiteUrl(v, true)).toThrow()
     }
   })
+  test('both modes reject whitespace, query and fragment', () => {
+    for (const deploy of [true, false]) {
+      for (const v of ['https://a b', 'https://x.dev/ foo', 'https://x.dev?a=1', 'https://x.dev/#top']) {
+        expect(() => resolveSiteUrl(v, deploy)).toThrow()
+      }
+    }
+  })
   test('local allows localhost and https, rejects others', () => {
     expect(resolveSiteUrl('http://localhost:3000', false)).toBe('http://localhost:3000')
     expect(resolveSiteUrl('https://x.dev', false)).toBe('https://x.dev')

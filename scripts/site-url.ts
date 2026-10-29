@@ -5,8 +5,9 @@ export function resolveSiteUrl(raw: string | undefined, deploy: boolean): string
     console.warn('warning: SITE_URL unset, using http://localhost:4173')
     return 'http://localhost:4173'
   }
+  if (/[\s?#]/.test(url)) throw new Error(`SITE_URL must not contain whitespace, ? or #, got "${url}"`)
   if (deploy) {
-    if (!/^https:\/\/[^/\s]+/.test(url) || /\s/.test(url)) {
+    if (!/^https:\/\/[^/]+/.test(url)) {
       throw new Error(`SITE_URL must be an https:// URL for a deploy build, got "${url}"`)
     }
   } else if (!/^https:\/\/[^/\s]+/.test(url) && !/^http:\/\/localhost(:\d+)?$/.test(url)) {
